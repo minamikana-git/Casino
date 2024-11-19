@@ -32,6 +32,7 @@ public class Game implements Listener {
         this.economy = economy;
         this.bet = bet;
         Bukkit.getPluginManager().registerEvents(this, Casino.getInstance());
+        logDebug("Game constructor: プレイヤー=" + player.getName() + "、賭け金=" + bet);
     }
 
     public void startGame(double betAmount) {
@@ -42,6 +43,7 @@ public class Game implements Listener {
 
         if (betAmount > playerBalance) {
             player.sendMessage("所持金より多い金額は賭けられません。");
+            logDebug("所持金より多い金額は賭けられません。");
             return;
         }
 
@@ -60,13 +62,21 @@ public class Game implements Listener {
 
         if (!dealInitialCards()) {
             player.sendMessage("デッキに十分なカードがありません。ゲームを中止します。");
+            logDebug("デッキに十分なカードがありません。");
             return;
         }
 
         updateScores();
         displayHands();
         player.sendMessage("あなたは " + betAmount + " を賭けました。ブラックジャックを開始します！");
+
+        // ゲーム状態を IN_PROGRESS に遷移
         gameState = GameState.IN_PROGRESS;
+        logDebug("ゲーム状態: IN_PROGRESS");
+
+        // ヒットまたはスタンドを待つ
+        player.sendMessage("ヒットまたはスタンドを選んでください。");
+        logDebug("プレイヤーにヒットまたはスタンドの選択を促しました。");
     }
 
     private boolean dealInitialCards() {
@@ -79,6 +89,7 @@ public class Game implements Listener {
         playerHand.add(deck.drawCard());
         dealerHand.add(deck.drawCard());
         dealerHand.add(deck.drawCard());
+        logDebug("初期カード配布完了: プレイヤー手札=" + handToString(playerHand) + ", ディーラー手札=" + handToString(dealerHand));
         return true;
     }
 
@@ -101,22 +112,66 @@ public class Game implements Listener {
             value -= 10;
             aceCount--;
         }
+        logDebug("計算中: 手札=" + handToString(hand) + " 合計=" + value);
         return value;
     }
 
     private void displayHands() {
         player.sendMessage("あなたの手札: " + handToString(playerHand) + " （合計: " + playerScore + "）");
         player.sendMessage("ディーラーの手札: " + dealerHand.get(0).getName() + " と隠されたカード");
+        logDebug("プレイヤー手札表示: " + handToString(playerHand) + " 合計: " + playerScore);
+        logDebug("ディーラー手札表示: " + dealerHand.get(0).getName() + " と隠されたカード");
     }
 
     private String handToString(List<Card> hand) {
         return hand.stream().map(Card::getName).collect(Collectors.joining(", "));
     }
 
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        if (!event.getPlayer().equals(player)) return;
+
+        String message = event.getMessage().toLowerCase();
+        event.setCancelled(true);
+
+        logDebug("チャットメッセージ受信: " + message);
+
+        switch (gameState) {
+            case IN_PROGRESS:
+                // ヒットまたはスタンドの選択を受け付ける
+                if (message.equals("ヒット")) {
+                    logDebug("プレイヤーがヒットを選択");
+                    hit();
+                } else if (message.equals("スタンド")) {
+                    logDebug("プレイヤーがスタンドを選択");
+                    stand();
+                } else {
+                    logDebug("無効な入力: " + message);
+                    player.sendMessage("無効な入力です。ヒットまたはスタンドを選択してください。");
+                }
+                break;
+
+            case WAITING_FOR_RESTART:
+                handleRestartInput(message);
+                break;
+
+            case WAITING_FOR_BET:
+                handleBetInput(message);
+                break;
+
+            default:
+                player.sendMessage("無効な状態です。ゲームを再開できません。");
+                logDebug("無効な状態でメッセージを送信");
+        }
+    }
+
+    
+
     public void hit() {
         logDebug("プレイヤーがヒットを選択...");
         if (deck.getCards().isEmpty()) {
             player.sendMessage("デッキが空です。");
+            logDebug("デッキが空です。ゲーム終了");
             determineWinner();
             return;
         }
@@ -125,6 +180,7 @@ public class Game implements Listener {
         displayHands();
         if (playerScore > 21) {
             player.sendMessage("あなたはバーストしました！負けです。");
+            logDebug("プレイヤーがバーストしました。");
             endGame(false);
         }
     }
@@ -133,9 +189,11 @@ public class Game implements Listener {
         logDebug("プレイヤーがスタンドを選択...");
         player.sendMessage("あなたはスタンドしました。ディーラーのターンです。");
         player.sendMessage("ディーラーの手札: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
+
         while (dealerScore < 17) {
             if (deck.getCards().isEmpty()) {
                 player.sendMessage("デッキが空です。");
+                logDebug("デッキが空です。ディーラーのターン終了");
                 break;
             }
             dealerHand.add(deck.drawCard());
@@ -149,12 +207,15 @@ public class Game implements Listener {
         logDebug("勝敗判定中...");
         if (dealerScore > 21 || playerScore > dealerScore) {
             player.sendMessage("おめでとうございます！あなたの勝ちです！");
+            logDebug("プレイヤーの勝ち！");
             endGame(true);
         } else if (playerScore < dealerScore) {
             player.sendMessage("残念、あなたの負けです。");
+            logDebug("プレイヤーの負け");
             endGame(false);
         } else {
             player.sendMessage("引き分けです！");
+            logDebug("引き分け");
             economy.depositPlayer(player, bet);
             endGame(false);
         }
@@ -168,51 +229,51 @@ public class Game implements Listener {
         player.sendMessage("ブラックジャックゲームが終了しました。所持金: " + economy.getBalance(player));
         askForRestart();
         gameState = GameState.WAITING_FOR_RESTART;
+        logDebug("ゲーム状態: WAITING_FOR_RESTART");
     }
 
     private void askForRestart() {
-        player.sendMessage("もう一度挑戦しますか？（はい/いいえ）");
-    }
-
-    @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        if (!event.getPlayer().equals(player)) return;
-
-        String message = event.getMessage().toLowerCase();
-        event.setCancelled(true);
-
-        switch (gameState) {
-            case WAITING_FOR_RESTART:
-                handleRestartInput(message);
-                break;
-            case WAITING_FOR_BET:
-                handleBetInput(message);
-                break;
-            default:
-                player.sendMessage("無効な状態です。ゲームを再開できません。");
-        }
+        player.sendMessage("もう一度プレイしますか？ (はい/いいえ)");
+        logDebug("プレイヤーに再プレイを促しました。");
     }
 
     private void handleRestartInput(String message) {
+        logDebug("再プレイ選択: " + message);
         if (message.equals("はい")) {
-            gameState = GameState.WAITING_FOR_BET;
-            player.sendMessage("賭け金を変更しますか？");
+            startGame(bet);
         } else if (message.equals("いいえ")) {
             player.sendMessage("ゲームを終了します。");
-            HandlerList.unregisterAll(this);
+            logDebug("プレイヤーがゲームを終了しました。");
+            endGame(false);
+        } else {
+            player.sendMessage("無効な入力です。はいまたはいいえで答えてください。");
         }
     }
-
     private void handleBetInput(String message) {
+        logDebug("受け取ったメッセージ: " + message);
+
         try {
-            double newBet = Double.parseDouble(message);
-            if (newBet <= economy.getBalance(player) && newBet > 0) {
-                startGame(newBet);
+            // プレイヤーが入力したメッセージを解析
+            double betAmount = Double.parseDouble(message);
+            double playerBalance = economy.getBalance(player);
+
+            // 入力された金額がプレイヤーの残高より多い場合
+            if (betAmount > playerBalance) {
+                player.sendMessage("所持金より多い金額は賭けられません。残高: " + playerBalance);
+                logDebug("入力された金額が所持金を超えている: " + betAmount);
+            } else if (betAmount <= 0) {
+                // 入力された金額が0以下の場合
+                player.sendMessage("無効な金額です。賭け金を再入力してください。");
+                logDebug("無効な賭け金が入力された: " + betAmount);
             } else {
-                player.sendMessage("無効な賭け金です。再入力してください。");
+                // 入力された金額が有効であれば、ゲームを開始
+                startGame(betAmount);
+                logDebug("賭け金 " + betAmount + " でゲーム開始");
             }
         } catch (NumberFormatException e) {
-            player.sendMessage("無効な入力です。再入力してください。");
+            // 数値以外が入力された場合の処理
+            player.sendMessage("無効な入力です。数値を入力してください。");
+            logDebug("無効な入力: " + message);
         }
     }
 
@@ -223,7 +284,7 @@ public class Game implements Listener {
     enum GameState {
         WAITING_FOR_START,
         IN_PROGRESS,
-        WAITING_FOR_RESTART,
-        WAITING_FOR_BET
+        WAITING_FOR_BET,
+        WAITING_FOR_RESTART
     }
 }
