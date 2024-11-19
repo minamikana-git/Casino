@@ -1,0 +1,25 @@
+name: Casino
+version: '1.21.1-SNAPSHOT'
+main: net.hotamachisubaru.casino.Casino
+api-version: '1.21'
+depend:
+  - [Vault]
+  - [Jecon]
+author:
+  Copyright (c) 2024 ほたまちスバル
+commands:
+  slots:
+    description: スロットで遊びます。
+    usage: /slots
+  roulette:
+    description: ルーレットで遊びます。
+    usage: /roulette
+  blackjack:
+    description: ブラックジャックで遊びます。
+    usage: /blackjack
+  buychips:
+    description: チップを買います。
+    usage: /buychips <amount>
+  opencasino:
+    description: カジノメニューを開きます。
+    usage: /opencasino
