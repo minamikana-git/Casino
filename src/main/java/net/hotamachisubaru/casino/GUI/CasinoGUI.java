@@ -1,5 +1,6 @@
 package net.hotamachisubaru.casino.GUI;
 
+import net.hotamachisubaru.casino.Casino;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,7 +16,7 @@ public class CasinoGUI implements Listener {
 
     private final JavaPlugin plugin; // プラグインのインスタンスを保持するための変数
 
-    public CasinoGUI(JavaPlugin plugin) {
+    public CasinoGUI(Casino plugin) {
         this.plugin = plugin;
     }
 

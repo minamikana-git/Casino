@@ -1,13 +1,10 @@
 package net.hotamachisubaru.casino;
 
-import net.hotamachisubaru.casino.Commands.BlackjackCommand;
-import net.hotamachisubaru.casino.Commands.BuyChip;
-import net.hotamachisubaru.casino.Commands.OpenCasinoCommand;
+import net.hotamachisubaru.casino.Commands.*;
 import net.hotamachisubaru.casino.GUI.CasinoGUI;
+import net.hotamachisubaru.casino.Listener.BlackjackChatListener;
 import net.hotamachisubaru.casino.Listener.CasinoListener;
 import net.hotamachisubaru.casino.Roulette.RouletteClickListener;
-import net.hotamachisubaru.casino.Commands.RouletteCommand;
-import net.hotamachisubaru.casino.Commands.SlotMachineCommand;
 import net.hotamachisubaru.casino.Vault.Jecon;
 import net.hotamachisubaru.casino.Vault.Vault;
 import net.milkbowl.vault.economy.Economy;
@@ -23,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class Casino extends JavaPlugin implements CommandExecutor {
     private Vault vault;
@@ -150,12 +146,11 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     private void registerEvents() {
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
         getServer().getPluginManager().registerEvents(new CasinoListener(), this);
-
+        getServer().getPluginManager().registerEvents(new BlackjackChatListener(this),this);
         // CasinoGUI のインスタンスを生成し、プラグインのインスタンスを渡す
         CasinoGUI casinoGUI = new CasinoGUI(this);
         getServer().getPluginManager().registerEvents(casinoGUI, this);
     }
-
 
     public Casino () {
         instance = this;
@@ -184,16 +179,14 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
     private void setupCommands() {
 
-        Map<String, CommandExecutor> commands = Map.of(
-                "slots", new SlotMachineCommand(),
-                "roulette", new RouletteCommand(),
-                "blackjack", new BlackjackCommand(),
-                "buychips", new BuyChip(this),
-                "opencasino", new OpenCasinoCommand(casinoGUI)
-        );
-        commands.forEach((cmd, executor) -> this.getCommand(cmd).setExecutor(executor));
-
+        getCommand("roulette").setExecutor(new RouletteCommand());
+        getCommand("slot").setExecutor(new SlotMachineCommand());
+        getCommand("buychips").setExecutor(new BuyChip(this));
+        getCommand("blackjack").setExecutor(new BlackjackCommand());
+        getCommand("casino").setExecutor(new OpenCasinoCommand());
     }
+
+
 
 
     public void addChips(Player player, int amount) {

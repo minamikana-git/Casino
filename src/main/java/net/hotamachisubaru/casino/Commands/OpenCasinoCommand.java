@@ -1,6 +1,7 @@
 package net.hotamachisubaru.casino.Commands;
 
 
+import net.hotamachisubaru.casino.Casino;
 import net.hotamachisubaru.casino.GUI.CasinoGUI;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -9,10 +10,10 @@ import org.bukkit.entity.Player;
 
 public class OpenCasinoCommand implements CommandExecutor {
 
-    private final CasinoGUI casinoGUI;
+    private CasinoGUI casinoGUI;
 
-    public OpenCasinoCommand(CasinoGUI casinoGUI) {
-        this.casinoGUI = casinoGUI;
+    public OpenCasinoCommand() {
+     this.casinoGUI = new CasinoGUI(Casino.getInstance());
     }
 
     @Override

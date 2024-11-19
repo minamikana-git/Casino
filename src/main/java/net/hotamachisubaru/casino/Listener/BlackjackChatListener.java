@@ -15,13 +15,26 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BlackjackChatListener implements Listener {
     private final Map<Player, Game> activeGames = new ConcurrentHashMap<>();
     private final Casino plugin;
+    private final Map<Player, PreGameState> preGameStates = new ConcurrentHashMap<>();
+
+    private static class PreGameState {
+        private final double balance;
+
+        public PreGameState(double balance) {
+            this.balance = balance;
+        }
+
+        public double getBalance() {
+            return balance;
+        }
+    }
 
     public BlackjackChatListener(Casino plugin) {
         this.plugin = plugin;
     }
 
     public void startGame(Player player) {
-        if (activeGames.containsKey(player)) {
+        if (activeGames.containsKey(player) || preGameStates.containsKey(player)) {
             player.sendMessage("現在、ゲームが進行中です。新しいゲームを開始するには終了してください。");
             return;
         }
@@ -32,21 +45,20 @@ public class BlackjackChatListener implements Listener {
         }
         // 賭け金を設定する
         player.sendMessage("かけ金を入力してください。所持金: " + balance);
-        activeGames.put(player, new PreGameState()); // ゲーム開始準備
+        preGameStates.put(player, new PreGameState(balance)); // ゲーム開始準備
     }
-
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         String message = event.getMessage();
-        if (activeGames.containsKey(player)) {
+        if (preGameStates.containsKey(player) || activeGames.containsKey(player)) {
             event.setCancelled(true);
-            Object state = activeGames.get(player);
-            if (state instanceof PreGameState) {
+            if (preGameStates.containsKey(player)) {
                 // かけ金の入力処理
                 try {
                     double betAmount = Double.parseDouble(message);
-                    double balance = EconomyHelper.getBalance(player); // EconomyHelperで所持金を取得
+                    PreGameState preGameState = preGameStates.get(player);
+                    double balance = preGameState.getBalance();
                     if (betAmount <= 0) {
                         player.sendMessage("賭け金は正の数でなければなりません。");
                         return;
@@ -58,13 +70,14 @@ public class BlackjackChatListener implements Listener {
                     // ゲーム開始
                     Game game = new Game(player, EconomyHelper.getEconomy(), betAmount); // Economyオブジェクトと賭け金を渡す
                     activeGames.put(player, game);
+                    preGameStates.remove(player);
                     player.sendMessage("ブラックジャックゲームが開始されました！「ヒット」または「スタンド」と入力してください。");
                 } catch (NumberFormatException e) {
                     player.sendMessage("無効な金額です。整数で入力してください。");
                 }
-            } else if (state instanceof Game) {
+            } else if (activeGames.containsKey(player)) {
                 // ゲーム進行
-                Game game = (Game) state;
+                Game game = activeGames.get(player);
                 switch (message) {
                     case "ヒット":
                         Bukkit.getScheduler().runTask(plugin, game::hit);
@@ -81,6 +94,4 @@ public class BlackjackChatListener implements Listener {
             }
         }
     }
-
-    private static class PreGameState {}
 }
