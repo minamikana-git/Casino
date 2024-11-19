@@ -23,6 +23,7 @@ public class Game implements Listener {
     private double bet;
     private int playerScore = 0;
     private int dealerScore = 0;
+    private GameState gameState = GameState.WAITING_FOR_START;
 
     public Game(Player player, Economy economy, double bet) {
         this.player = player;
@@ -34,21 +35,29 @@ public class Game implements Listener {
     }
 
     public void startGame(double betAmount) {
+        logDebug("ゲーム開始処理中...");
+
         double playerBalance = economy.getBalance(player);
+        logDebug("現在のプレイヤー残高: " + playerBalance);
+
         if (betAmount > playerBalance) {
-            player.sendMessage("所持金よりも多い金額は賭けられません。");
+            player.sendMessage("所持金より多い金額は賭けられません。");
             return;
         }
+
         this.bet = betAmount;
         EconomyResponse response = economy.withdrawPlayer(player, bet);
         if (!response.transactionSuccess()) {
             player.sendMessage("所持金が不足しています：" + response.errorMessage);
+            logDebug("トランザクション失敗: " + response.errorMessage);
             return;
         }
 
-        //カードを配る処理
+        logDebug("トランザクション成功: " + betAmount + " 引き落としました。残高: " + economy.getBalance(player));
+
         playerHand.clear();
         dealerHand.clear();
+
         if (!dealInitialCards()) {
             player.sendMessage("デッキに十分なカードがありません。ゲームを中止します。");
             return;
@@ -57,10 +66,13 @@ public class Game implements Listener {
         updateScores();
         displayHands();
         player.sendMessage("あなたは " + betAmount + " を賭けました。ブラックジャックを開始します！");
+        gameState = GameState.IN_PROGRESS;
     }
 
     private boolean dealInitialCards() {
+        logDebug("初期カードを配布中...");
         if (deck.getCards().size() < 4) {
+            logDebug("デッキに十分なカードがありません。");
             return false;
         }
         playerHand.add(deck.drawCard());
@@ -73,6 +85,7 @@ public class Game implements Listener {
     private void updateScores() {
         playerScore = calculateHandValue(playerHand);
         dealerScore = calculateHandValue(dealerHand);
+        logDebug("スコア更新: プレイヤー=" + playerScore + ", ディーラー=" + dealerScore);
     }
 
     private int calculateHandValue(List<Card> hand) {
@@ -101,6 +114,7 @@ public class Game implements Listener {
     }
 
     public void hit() {
+        logDebug("プレイヤーがヒットを選択...");
         if (deck.getCards().isEmpty()) {
             player.sendMessage("デッキが空です。");
             determineWinner();
@@ -116,6 +130,7 @@ public class Game implements Listener {
     }
 
     public void stand() {
+        logDebug("プレイヤーがスタンドを選択...");
         player.sendMessage("あなたはスタンドしました。ディーラーのターンです。");
         player.sendMessage("ディーラーの手札: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
         while (dealerScore < 17) {
@@ -125,12 +140,13 @@ public class Game implements Listener {
             }
             dealerHand.add(deck.drawCard());
             updateScores();
-            player.sendMessage("ディーラーがカードを引きました。現在の手札: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
+            logDebug("ディーラーがカードを引きました: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
         }
         determineWinner();
     }
 
     private void determineWinner() {
+        logDebug("勝敗判定中...");
         if (dealerScore > 21 || playerScore > dealerScore) {
             player.sendMessage("おめでとうございます！あなたの勝ちです！");
             endGame(true);
@@ -145,11 +161,13 @@ public class Game implements Listener {
     }
 
     private void endGame(boolean won) {
+        logDebug("ゲーム終了処理: 勝利=" + won);
         if (won) {
             economy.depositPlayer(player, bet * 2);
         }
         player.sendMessage("ブラックジャックゲームが終了しました。所持金: " + economy.getBalance(player));
         askForRestart();
+        gameState = GameState.WAITING_FOR_RESTART;
     }
 
     private void askForRestart() {
@@ -158,43 +176,54 @@ public class Game implements Listener {
 
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
-        Player chatPlayer = event.getPlayer();
+        if (!event.getPlayer().equals(player)) return;
+
         String message = event.getMessage().toLowerCase();
-        if (chatPlayer.equals(player) && (message.equals("はい") || message.equals("いいえ"))) {
-            event.setCancelled(true);
-            if (message.equals("はい")) {
-                player.sendMessage("賭け金を変更しますか？（変更しない場合はそのまま進行します。）");
-                askForBetChange();
+        event.setCancelled(true);
+
+        switch (gameState) {
+            case WAITING_FOR_RESTART:
+                handleRestartInput(message);
+                break;
+            case WAITING_FOR_BET:
+                handleBetInput(message);
+                break;
+            default:
+                player.sendMessage("無効な状態です。ゲームを再開できません。");
+        }
+    }
+
+    private void handleRestartInput(String message) {
+        if (message.equals("はい")) {
+            gameState = GameState.WAITING_FOR_BET;
+            player.sendMessage("賭け金を変更しますか？");
+        } else if (message.equals("いいえ")) {
+            player.sendMessage("ゲームを終了します。");
+            HandlerList.unregisterAll(this);
+        }
+    }
+
+    private void handleBetInput(String message) {
+        try {
+            double newBet = Double.parseDouble(message);
+            if (newBet <= economy.getBalance(player) && newBet > 0) {
+                startGame(newBet);
             } else {
-                player.sendMessage("ゲームを終了します。");
-                HandlerList.unregisterAll(this);
+                player.sendMessage("無効な賭け金です。再入力してください。");
             }
+        } catch (NumberFormatException e) {
+            player.sendMessage("無効な入力です。再入力してください。");
         }
     }
 
-    private void askForBetChange() {
-        player.sendMessage("賭け金を変更したい場合は新しい賭け金を入力してください。変更しない場合はそのままゲームを再開します。");
+    private void logDebug(String message) {
+        Bukkit.getLogger().info("[Blackjack Debug] " + message);
     }
 
-    @EventHandler
-    public void onBetInput(AsyncPlayerChatEvent event) {
-        Player chatPlayer = event.getPlayer();
-        String message = event.getMessage().toLowerCase();
-        if (chatPlayer.equals(player)) {
-            try {
-                double newBet = Double.parseDouble(message);
-                if (newBet <= economy.getBalance(player) && newBet > 0) {
-                    bet = newBet;
-                    player.sendMessage("賭け金が " + newBet + " に変更されました。ゲームを再開します！");
-                    startGame(newBet);
-                } else {
-                    player.sendMessage("無効な賭け金です。所持金より多くは賭けられません。");
-                    askForBetChange();
-                }
-            } catch (NumberFormatException e) {
-                player.sendMessage("無効な入力です。正しい金額を入力してください。");
-                askForBetChange();
-            }
-        }
+    enum GameState {
+        WAITING_FOR_START,
+        IN_PROGRESS,
+        WAITING_FOR_RESTART,
+        WAITING_FOR_BET
     }
 }

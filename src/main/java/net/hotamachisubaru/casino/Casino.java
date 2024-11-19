@@ -23,26 +23,24 @@ import java.util.List;
 
 public class Casino extends JavaPlugin implements CommandExecutor {
     private Vault vault;
-    private Jecon jecon;
+    private static Economy economy;
     private FileConfiguration slotConfig;
     private FileConfiguration rouletteConfig;
     private FileConfiguration chipsConfig;
     private FileConfiguration jackpotConfig;
-    private CasinoGUI casinoGUI;
     private static Casino instance;
     private int minimumBet;
     private int maximumBet;
     private List<Material> slotItems = new ArrayList<>();
 
-    private Economy economy;
+
     @Override
     public void onEnable() {
         vault = new Vault();
-        jecon = new Jecon();
         instance = this;
         setupCasino();
         setupEconomy();
-        casinoGUI = new CasinoGUI(this); // CasinoGUI インスタンスを作成
+        CasinoGUI casinoGUI = new CasinoGUI(this); // CasinoGUI インスタンスを作成
         setupCommands();
         registerEvents();
     }
@@ -139,8 +137,8 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return vault;
     }
 
-    public Jecon getJecon() {
-        return jecon;
+    public static Economy getEconomy() {
+        return economy;
     }
 
     private void registerEvents() {
