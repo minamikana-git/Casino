@@ -4,11 +4,16 @@ import net.hotamachisubaru.casino.Casino;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +81,7 @@ public class Game implements Listener {
 
         // ヒットまたはスタンドを待つ
         player.sendMessage("ヒットまたはスタンドを選んでください。");
-        logDebug("プレイヤーにヒットまたはスタンドの選択を促しました。");
+        openBlackjackGUI();
     }
 
     private boolean dealInitialCards() {
@@ -116,6 +121,7 @@ public class Game implements Listener {
         return value;
     }
 
+
     private void displayHands() {
         player.sendMessage("あなたの手札: " + handToString(playerHand) + " （合計: " + playerScore + "）");
         player.sendMessage("ディーラーの手札: " + dealerHand.get(0).getName() + " と隠されたカード");
@@ -128,6 +134,36 @@ public class Game implements Listener {
     }
 
     @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+
+        Player player = (Player) event.getWhoClicked();
+
+        // インベントリのカスタムタイトルを取得する
+        String inventoryTitle = event.getView().getTitle();
+        if (!inventoryTitle.equals("ブラックジャック: アクションを選択")) return;
+
+        event.setCancelled(true);  // アイテムを取り出せないようにする
+
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null || clickedItem.getItemMeta() == null) return;
+
+        String itemName = clickedItem.getItemMeta().getDisplayName();
+
+        // 「ヒット」ボタンがクリックされた場合
+        if (itemName.equals("ヒット")) {
+            hit();
+        }
+        // 「スタンド」ボタンがクリックされた場合
+        else if (itemName.equals("スタンド")) {
+            stand();
+        }
+    }
+
+
+
+
+    @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         if (!event.getPlayer().equals(player)) return;
 
@@ -138,17 +174,7 @@ public class Game implements Listener {
 
         switch (gameState) {
             case IN_PROGRESS:
-                // ヒットまたはスタンドの選択を受け付ける
-                if (message.equals("ヒット")) {
-                    logDebug("プレイヤーがヒットを選択");
-                    hit();
-                } else if (message.equals("スタンド")) {
-                    logDebug("プレイヤーがスタンドを選択");
-                    stand();
-                } else {
-                    logDebug("無効な入力: " + message);
-                    player.sendMessage("無効な入力です。ヒットまたはスタンドを選択してください。");
-                }
+                player.sendMessage("GUIで選択してください。");
                 break;
 
             case WAITING_FOR_RESTART:
@@ -159,13 +185,16 @@ public class Game implements Listener {
                 handleBetInput(message);
                 break;
 
+            case WAITING_FOR_DOUBLE_UP:
+                handleDoubleUpInput(message);
+                break;
+
             default:
                 player.sendMessage("無効な状態です。ゲームを再開できません。");
                 logDebug("無効な状態でメッセージを送信");
         }
     }
 
-    
 
     public void hit() {
         logDebug("プレイヤーがヒットを選択...");
@@ -178,12 +207,46 @@ public class Game implements Listener {
         playerHand.add(deck.drawCard());
         updateScores();
         displayHands();
+
         if (playerScore > 21) {
             player.sendMessage("あなたはバーストしました！負けです。");
             logDebug("プレイヤーがバーストしました。");
             endGame(false);
+        } else {
+            // ヒットまたはスタンドの選択肢をGUIで表示
+            openBlackjackGUI();  // GUIを再度表示
+            logDebug("ヒット後、GUIでヒットまたはスタンドの選択肢を表示しました。");
         }
     }
+
+    private void showHitOrStandGUI() {
+        // GUIインベントリを作成
+        Inventory gui = Bukkit.createInventory(null, 9, "ブラックジャック: アクションを選択");
+
+        // ヒットボタンを作成
+        ItemStack hitButton = new ItemStack(Material.GREEN_WOOL); // 好きなアイテムを指定
+        ItemMeta hitMeta = hitButton.getItemMeta();
+        if (hitMeta != null) {
+            hitMeta.setDisplayName("ヒット");
+            hitButton.setItemMeta(hitMeta);
+        }
+
+        // スタンドボタンを作成
+        ItemStack standButton = new ItemStack(Material.RED_WOOL);
+        ItemMeta standMeta = standButton.getItemMeta();
+        if (standMeta != null) {
+            standMeta.setDisplayName("スタンド");
+            standButton.setItemMeta(standMeta);
+        }
+
+        // ボタンをGUIに追加
+        gui.setItem(3, hitButton);
+        gui.setItem(5, standButton);
+
+        // プレイヤーにGUIを開かせる
+        player.openInventory(gui);
+    }
+
 
     public void stand() {
         logDebug("プレイヤーがスタンドを選択...");
@@ -204,87 +267,98 @@ public class Game implements Listener {
     }
 
     private void determineWinner() {
-        logDebug("勝敗判定中...");
-        if (dealerScore > 21 || playerScore > dealerScore) {
-            player.sendMessage("おめでとうございます！あなたの勝ちです！");
-            logDebug("プレイヤーの勝ち！");
-            endGame(true);
-        } else if (playerScore < dealerScore) {
-            player.sendMessage("残念、あなたの負けです。");
-            logDebug("プレイヤーの負け");
-            endGame(false);
-        } else {
+        logDebug("勝者判定中...");
+        if (playerScore > 21) {
+            player.sendMessage("あなたはバーストしました！ディーラーの勝ちです。");
+            economy.depositPlayer(player, bet); // 返金
+        } else if (dealerScore > 21 || playerScore > dealerScore) {
+            player.sendMessage("あなたの勝ちです！おめでとう！");
+            economy.depositPlayer(player, bet * 2); // 賭け金の倍を返却
+        } else if (playerScore == dealerScore) {
             player.sendMessage("引き分けです！");
-            logDebug("引き分け");
-            economy.depositPlayer(player, bet);
-            endGame(false);
+            economy.depositPlayer(player, bet); // 賭け金をそのまま返す
+        } else {
+            player.sendMessage("ディーラーの勝ちです。");
+            // 賭け金は戻らない
         }
+        endGame(true);
     }
 
     private void endGame(boolean won) {
-        logDebug("ゲーム終了処理: 勝利=" + won);
-        if (won) {
-            economy.depositPlayer(player, bet * 2);
-        }
-        player.sendMessage("ブラックジャックゲームが終了しました。所持金: " + economy.getBalance(player));
-        askForRestart();
         gameState = GameState.WAITING_FOR_RESTART;
-        logDebug("ゲーム状態: WAITING_FOR_RESTART");
+        HandlerList.unregisterAll(this);
+        player.closeInventory();
+        logDebug(won ? "ゲーム終了、プレイヤーの勝利" : "ゲーム終了、ディーラーの勝利");
     }
 
-    private void askForRestart() {
-        player.sendMessage("もう一度プレイしますか？ (はい/いいえ)");
-        logDebug("プレイヤーに再プレイを促しました。");
+    public void openBlackjackGUI() {
+        // 新しいGUIインベントリを作成
+        Inventory gui = Bukkit.createInventory(null, 9, "ブラックジャック: アクションを選択");
+
+        // ヒットボタンを作成
+        ItemStack hitButton = new ItemStack(Material.GREEN_WOOL);
+        ItemMeta hitMeta = hitButton.getItemMeta();
+        if (hitMeta != null) {
+            hitMeta.setDisplayName("ヒット");
+            hitButton.setItemMeta(hitMeta);
+        }
+
+        // スタンドボタンを作成
+        ItemStack standButton = new ItemStack(Material.RED_WOOL);
+        ItemMeta standMeta = standButton.getItemMeta();
+        if (standMeta != null) {
+            standMeta.setDisplayName("スタンド");
+            standButton.setItemMeta(standMeta);
+        }
+
+        // インベントリにボタンをセット
+        gui.setItem(3, hitButton);  // ヒットボタン（インベントリの3番目）
+        gui.setItem(5, standButton); // スタンドボタン（インベントリの5番目）
+
+
+        // プレイヤーにインベントリを表示
+        player.openInventory(gui);
     }
+
 
     private void handleRestartInput(String message) {
-        logDebug("再プレイ選択: " + message);
-        if (message.equals("はい")) {
-            startGame(bet);
-        } else if (message.equals("いいえ")) {
-            player.sendMessage("ゲームを終了します。");
-            logDebug("プレイヤーがゲームを終了しました。");
-            endGame(false);
+        if (message.equals("yes")) {
+            player.sendMessage("新しい賭け金を入力してください。");
+            gameState = GameState.WAITING_FOR_BET;  // 新しい賭け金を待つ状態に変更
         } else {
-            player.sendMessage("無効な入力です。はいまたはいいえで答えてください。");
+            player.sendMessage("ゲームを終了しました。");
+            endGame(false);
         }
     }
+
+
     private void handleBetInput(String message) {
-        logDebug("受け取ったメッセージ: " + message);
-
         try {
-            // プレイヤーが入力したメッセージを解析
-            double betAmount = Double.parseDouble(message);
-            double playerBalance = economy.getBalance(player);
-
-            // 入力された金額がプレイヤーの残高より多い場合
-            if (betAmount > playerBalance) {
-                player.sendMessage("所持金より多い金額は賭けられません。残高: " + playerBalance);
-                logDebug("入力された金額が所持金を超えている: " + betAmount);
-            } else if (betAmount <= 0) {
-                // 入力された金額が0以下の場合
-                player.sendMessage("無効な金額です。賭け金を再入力してください。");
-                logDebug("無効な賭け金が入力された: " + betAmount);
+            double newBet = Double.parseDouble(message);
+            if (newBet > 0) {
+                startGame(newBet);
             } else {
-                // 入力された金額が有効であれば、ゲームを開始
-                startGame(betAmount);
-                logDebug("賭け金 " + betAmount + " でゲーム開始");
+                player.sendMessage("無効な金額です。");
             }
         } catch (NumberFormatException e) {
-            // 数値以外が入力された場合の処理
-            player.sendMessage("無効な入力です。数値を入力してください。");
-            logDebug("無効な入力: " + message);
+            player.sendMessage("無効な金額です。");
         }
+    }
+
+    private void handleDoubleUpInput(String message) {
+        // ダブルアップ処理
     }
 
     private void logDebug(String message) {
-        Bukkit.getLogger().info("[Blackjack Debug] " + message);
+        // デバッグ用のロギング
+        Bukkit.getLogger().info(message);
     }
 
-    enum GameState {
+    private enum GameState {
         WAITING_FOR_START,
         IN_PROGRESS,
+        WAITING_FOR_RESTART,
         WAITING_FOR_BET,
-        WAITING_FOR_RESTART
+        WAITING_FOR_DOUBLE_UP
     }
 }

@@ -21,13 +21,22 @@ public class BlackjackCommand implements CommandExecutor {
         // Economyの初期化（Vaultが正しくセットアップされている必要があります）
         Economy economy = Casino.getEconomy();
 
-        // 賭け金のデフォルト値
-        double betAmount = 100.0;
+        // 引数が1つの場合（賭け金を指定）
+        double betAmount = 100.0;  // デフォルト値
+        if (args.length == 1) {
+            try {
+                betAmount = Double.parseDouble(args[0]);
+            } catch (NumberFormatException e) {
+                player.sendMessage("無効な賭け金です。数値を入力してください。");
+                return false;
+            }
+        }
 
-        // プレイヤーの所持金を確認してデバッグ
+        // プレイヤーの所持金を確認
         double balance = economy.getBalance(player);
         player.sendMessage("現在の所持金: " + balance);
 
+        // 所持金が賭け金に足りているか確認
         if (balance < betAmount) {
             player.sendMessage("所持金が不足しています。ブラックジャックを開始できません。");
             return true;
