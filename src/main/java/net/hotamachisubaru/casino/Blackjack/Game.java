@@ -7,13 +7,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +39,11 @@ public class Game implements Listener {
         Bukkit.getPluginManager().registerEvents(this, Casino.getInstance());
         logDebug("Game constructor: プレイヤー=" + player.getName() + "、賭け金=" + bet);
     }
+
+    private void logDebug(String message) {
+        System.out.println("[Casino Debug] " + message);
+    }
+
 
     public void startGame(double betAmount) {
         logDebug("ゲーム開始処理中...");
@@ -107,17 +112,26 @@ public class Game implements Listener {
     private int calculateHandValue(List<Card> hand) {
         int value = 0;
         int aceCount = 0;
+
+        // カードの値を計算
         for (Card card : hand) {
-            value += card.getValue();
-            if (card.getName().equals("A")) {
-                aceCount++;
+            if (card.getName().equals("J") || card.getName().equals("Q") || card.getName().equals("K")) {
+                value += 10;
+            } else if (card.getName().equals("A")) {
+                aceCount++;  // エースは後で調整するため、カウントする
+                value += 11; // エースを最初は11として加算
+            } else {
+                value += card.getValue();  // 数字カード
             }
         }
+
+        // エースが11のままだと21を超える可能性があるので、その場合は11を1に調整
         while (value > 21 && aceCount > 0) {
-            value -= 10;
+            value -= 10;  // エースを1に変換
             aceCount--;
         }
-        logDebug("計算中: 手札=" + handToString(hand) + " 合計=" + value);
+
+        logDebug("手札の合計計算: 手札=" + handToString(hand) + " 合計=" + value);
         return value;
     }
 
@@ -133,232 +147,192 @@ public class Game implements Listener {
         return hand.stream().map(Card::getName).collect(Collectors.joining(", "));
     }
 
+    private void openBlackjackGUI() {
+        openGui("ブラックジャック: アクションを選択", "ヒット", "スタンド");
+    }
+
+    public void openBlackjackDoubleUpGUI() {
+        System.out.println("[Casino Debug] ダブルアップGUIを作成しています...");
+
+        Inventory doubleUpGUI = Bukkit.createInventory(null, 9, "ダブルアップ！");
+
+        ItemStack doubleUpItem = new ItemStack(Material.GOLD_INGOT);  // アイテム例
+        ItemMeta meta = doubleUpItem.getItemMeta();
+        meta.setDisplayName("ダブルアップ");
+        doubleUpItem.setItemMeta(meta);
+
+        doubleUpGUI.setItem(4, doubleUpItem);  // 中央に配置
+
+        System.out.println("[Casino Debug] ダブルアップGUIを開きます。");
+        player.openInventory(doubleUpGUI);
+    }
+
+
+
+    private void openGui(String title, String... buttonNames) {
+        Inventory gui = Bukkit.createInventory(null, 9, title);
+
+        for (int i = 0; i < buttonNames.length; i++) {
+            ItemStack button = createButton(buttonNames[i]);
+            gui.setItem(i * 2 + 3, button);  // ボタンを設定
+        }
+
+        player.openInventory(gui);
+    }
+
+    private ItemStack createButton(String name) {
+        ItemStack button = new ItemStack(Material.GREEN_WOOL);  // デフォルトはGREEN_WOOL
+        if (name.equals("スタンド")) {
+            button.setType(Material.RED_WOOL);  // スタンドはRED_WOOL
+        } else if (name.equals("ドロップアウト")) {
+            button.setType(Material.GRAY_WOOL);  // ドロップアウトはGRAY_WOOL
+        }
+
+        ItemMeta meta = button.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            button.setItemMeta(meta);
+        }
+        return button;
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
 
-        Player player = (Player) event.getWhoClicked();
+        Player clickedPlayer = (Player) event.getWhoClicked();
+        if (!clickedPlayer.equals(player)) return;  // 他のプレイヤーがクリックした場合は無視
 
-        // インベントリのカスタムタイトルを取得する
-        String inventoryTitle = event.getView().getTitle();
-        if (!inventoryTitle.equals("ブラックジャック: アクションを選択")) return;
+        event.setCancelled(true);  // イベントのキャンセル
 
-        event.setCancelled(true);  // アイテムを取り出せないようにする
+        String title = event.getView().getTitle();
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getItemMeta() == null) return;
-
-        String itemName = clickedItem.getItemMeta().getDisplayName();
-
-        // 「ヒット」ボタンがクリックされた場合
-        if (itemName.equals("ヒット")) {
-            hit();
+        if (title.equals("ブラックジャック: アクションを選択")) {
+            handleBlackjackAction(event);
+        } else if (title.equals("ダブルアップ: 黒か赤を選択")) {
+            handleDoubleUpAction(event);
         }
-        // 「スタンド」ボタンがクリックされた場合
-        else if (itemName.equals("スタンド")) {
+    }
+
+    private void handleBlackjackAction(InventoryClickEvent event) {
+        String clickedItemName = event.getCurrentItem().getItemMeta().getDisplayName();
+
+        if (clickedItemName.equals("ヒット")) {
+            hit();
+        } else if (clickedItemName.equals("スタンド")) {
             stand();
         }
     }
 
+    private void handleDoubleUpAction(InventoryClickEvent event) {
+        String clickedItemName = event.getCurrentItem().getItemMeta().getDisplayName();
 
+        // ゲームが既に終了している場合は何もしない
+        if (gameState == GameState.FINISHED) {
+            return;
+        }
 
+        if (clickedItemName.equals("黒") || clickedItemName.equals("赤")) {
+            processDoubleUp(clickedItemName);
+        } else if (clickedItemName.equals("ドロップアウト")) {
+            dropOut();
+        }
 
-    @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        if (!event.getPlayer().equals(player)) return;
+        // ダブルアップ処理後、ゲーム状態を終了にしてGUIを閉じる
+        gameState = GameState.FINISHED;
+        closeBlackjackGUI();  // ダブルアップ後にGUIを閉じる
+    }
 
-        String message = event.getMessage().toLowerCase();
-        event.setCancelled(true);
-
-        logDebug("チャットメッセージ受信: " + message);
-
-        switch (gameState) {
-            case IN_PROGRESS:
-                player.sendMessage("GUIで選択してください。");
-                break;
-
-            case WAITING_FOR_RESTART:
-                handleRestartInput(message);
-                break;
-
-            case WAITING_FOR_BET:
-                handleBetInput(message);
-                break;
-
-            case WAITING_FOR_DOUBLE_UP:
-                handleDoubleUpInput(message);
-                break;
-
-            default:
-                player.sendMessage("無効な状態です。ゲームを再開できません。");
-                logDebug("無効な状態でメッセージを送信");
+    private void closeBlackjackGUI() {
+        // プレイヤーがGUIを開いていたインベントリを閉じる処理
+        if (player.getOpenInventory() != null) {
+            player.closeInventory();
         }
     }
 
-
     public void hit() {
-        logDebug("プレイヤーがヒットを選択...");
-        if (deck.getCards().isEmpty()) {
-            player.sendMessage("デッキが空です。");
-            logDebug("デッキが空です。ゲーム終了");
-            determineWinner();
-            return;
-        }
         playerHand.add(deck.drawCard());
         updateScores();
         displayHands();
 
         if (playerScore > 21) {
-            player.sendMessage("あなたはバーストしました！負けです。");
-            logDebug("プレイヤーがバーストしました。");
+            player.sendMessage("あなたの手札が21を超えました。あなたの負けです！");
             endGame(false);
-        } else {
-            // ヒットまたはスタンドの選択肢をGUIで表示
-            openBlackjackGUI();  // GUIを再度表示
-            logDebug("ヒット後、GUIでヒットまたはスタンドの選択肢を表示しました。");
         }
     }
-
-    private void showHitOrStandGUI() {
-        // GUIインベントリを作成
-        Inventory gui = Bukkit.createInventory(null, 9, "ブラックジャック: アクションを選択");
-
-        // ヒットボタンを作成
-        ItemStack hitButton = new ItemStack(Material.GREEN_WOOL); // 好きなアイテムを指定
-        ItemMeta hitMeta = hitButton.getItemMeta();
-        if (hitMeta != null) {
-            hitMeta.setDisplayName("ヒット");
-            hitButton.setItemMeta(hitMeta);
-        }
-
-        // スタンドボタンを作成
-        ItemStack standButton = new ItemStack(Material.RED_WOOL);
-        ItemMeta standMeta = standButton.getItemMeta();
-        if (standMeta != null) {
-            standMeta.setDisplayName("スタンド");
-            standButton.setItemMeta(standMeta);
-        }
-
-        // ボタンをGUIに追加
-        gui.setItem(3, hitButton);
-        gui.setItem(5, standButton);
-
-        // プレイヤーにGUIを開かせる
-        player.openInventory(gui);
-    }
-
 
     public void stand() {
-        logDebug("プレイヤーがスタンドを選択...");
-        player.sendMessage("あなたはスタンドしました。ディーラーのターンです。");
-        player.sendMessage("ディーラーの手札: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
+        // プレイヤーがバーストしている場合はディーラーのターンを開始しない
+        if (playerScore > 21) {
+            endGame(false);  // プレイヤーがバーストしているので即終了
+            return;
+        }
 
+        // ディーラーのターンを開始
         while (dealerScore < 17) {
-            if (deck.getCards().isEmpty()) {
-                player.sendMessage("デッキが空です。");
-                logDebug("デッキが空です。ディーラーのターン終了");
-                break;
-            }
             dealerHand.add(deck.drawCard());
             updateScores();
-            logDebug("ディーラーがカードを引きました: " + handToString(dealerHand) + " （合計: " + dealerScore + "）");
-        }
-        determineWinner();
-    }
-
-    private void determineWinner() {
-        logDebug("勝者判定中...");
-        if (playerScore > 21) {
-            player.sendMessage("あなたはバーストしました！ディーラーの勝ちです。");
-            economy.depositPlayer(player, bet); // 返金
-        } else if (dealerScore > 21 || playerScore > dealerScore) {
-            player.sendMessage("あなたの勝ちです！おめでとう！");
-            economy.depositPlayer(player, bet * 2); // 賭け金の倍を返却
-        } else if (playerScore == dealerScore) {
-            player.sendMessage("引き分けです！");
-            economy.depositPlayer(player, bet); // 賭け金をそのまま返す
-        } else {
-            player.sendMessage("ディーラーの勝ちです。");
-            // 賭け金は戻らない
-        }
-        endGame(true);
-    }
-
-    private void endGame(boolean won) {
-        gameState = GameState.WAITING_FOR_RESTART;
-        HandlerList.unregisterAll(this);
-        player.closeInventory();
-        logDebug(won ? "ゲーム終了、プレイヤーの勝利" : "ゲーム終了、ディーラーの勝利");
-    }
-
-    public void openBlackjackGUI() {
-        // 新しいGUIインベントリを作成
-        Inventory gui = Bukkit.createInventory(null, 9, "ブラックジャック: アクションを選択");
-
-        // ヒットボタンを作成
-        ItemStack hitButton = new ItemStack(Material.GREEN_WOOL);
-        ItemMeta hitMeta = hitButton.getItemMeta();
-        if (hitMeta != null) {
-            hitMeta.setDisplayName("ヒット");
-            hitButton.setItemMeta(hitMeta);
         }
 
-        // スタンドボタンを作成
-        ItemStack standButton = new ItemStack(Material.RED_WOOL);
-        ItemMeta standMeta = standButton.getItemMeta();
-        if (standMeta != null) {
-            standMeta.setDisplayName("スタンド");
-            standButton.setItemMeta(standMeta);
-        }
-
-        // インベントリにボタンをセット
-        gui.setItem(3, hitButton);  // ヒットボタン（インベントリの3番目）
-        gui.setItem(5, standButton); // スタンドボタン（インベントリの5番目）
-
-
-        // プレイヤーにインベントリを表示
-        player.openInventory(gui);
+        // 勝敗を判定
+        endGame(dealerScore > 21 || playerScore > dealerScore);
     }
 
 
-    private void handleRestartInput(String message) {
-        if (message.equals("yes")) {
-            player.sendMessage("新しい賭け金を入力してください。");
-            gameState = GameState.WAITING_FOR_BET;  // 新しい賭け金を待つ状態に変更
-        } else {
-            player.sendMessage("ゲームを終了しました。");
-            endGame(false);
-        }
-    }
-
-
-    private void handleBetInput(String message) {
-        try {
-            double newBet = Double.parseDouble(message);
-            if (newBet > 0) {
-                startGame(newBet);
-            } else {
-                player.sendMessage("無効な金額です。");
-            }
-        } catch (NumberFormatException e) {
-            player.sendMessage("無効な金額です。");
-        }
-    }
-
-    private void handleDoubleUpInput(String message) {
+    private void processDoubleUp(String color) {
         // ダブルアップ処理
+        double doubleUpBet = bet * 2;
+
+        EconomyResponse response = economy.withdrawPlayer(player, doubleUpBet);
+        if (!response.transactionSuccess()) {
+            player.sendMessage("所持金が不足しています。");
+            return;
+        }
+
+        player.sendMessage("ダブルアップを選択しました。");
+        bet = doubleUpBet;
+        openBlackjackDoubleUpGUI();  // 次のステップに進む
     }
 
-    private void logDebug(String message) {
-        // デバッグ用のロギング
-        Bukkit.getLogger().info(message);
+    private void dropOut() {
+        player.sendMessage("あなたはゲームをドロップアウトしました。");
+        endGame(false);
     }
+
+    private void endGame(boolean playerWins) {
+        if (playerWins) {
+            economy.depositPlayer(player, bet * 2);  // 勝った場合、倍額を支給
+            player.sendMessage("おめでとうございます！あなたの勝ちです！");
+
+            // デバッグログを追加
+            System.out.println("[Casino Debug] ダブルアップ画面を開きます。");
+
+            // Bukkitのスケジューラを使用して非同期表示
+            Bukkit.getScheduler().runTask(Casino.getInstance(), new Runnable() {
+                @Override
+                public void run() {
+                    openBlackjackDoubleUpGUI();
+                }
+            });
+        } else {
+            if (playerScore > 21) {
+                player.sendMessage("あなたはバーストしました。ディーラーの勝ちです！");
+            } else {
+                player.sendMessage("残念、あなたは負けました！");
+            }
+        }
+        gameState = GameState.FINISHED;
+
+        // 終了時のGUI閉じ処理
+        Bukkit.getScheduler().runTask(Casino.getInstance(), () -> closeBlackjackGUI());
+    }
+
+
+
+
+
 
     private enum GameState {
-        WAITING_FOR_START,
-        IN_PROGRESS,
-        WAITING_FOR_RESTART,
-        WAITING_FOR_BET,
-        WAITING_FOR_DOUBLE_UP
+        WAITING_FOR_START, IN_PROGRESS, FINISHED
     }
 }

@@ -1,53 +1,50 @@
-package net.hotamachisubaru.casino.Vault;
-import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
+package net.hotamachisubaru.casino.Vault
 
-public class Vault {
-    private Economy economy;
+import net.milkbowl.vault.economy.Economy
+import org.bukkit.Bukkit
+import org.bukkit.entity.Player
 
-    public Vault() {
+class Vault {
+    var economy: Economy? = null
+        private set
+
+    init {
         if (!setupEconomy()) {
-            Bukkit.getLogger().warning("Vaultのセットアップに失敗しました。");
+            Bukkit.getLogger().warning("Vaultのセットアップに失敗しました。")
         }
     }
 
-    private boolean setupEconomy() {
+    private fun setupEconomy(): Boolean {
         if (Bukkit.getServer().getPluginManager().getPlugin("Vault") == null) {
-            Bukkit.getLogger().warning("Vaultプラグインが見つかりません。");
-            return false;
+            Bukkit.getLogger().warning("Vaultプラグインが見つかりません。")
+            return false
         }
 
-        RegisteredServiceProvider<Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
+        val rsp = Bukkit.getServer().getServicesManager().getRegistration<Economy?>(Economy::class.java)
         if (rsp == null) {
-            Bukkit.getLogger().warning("Economyサービスが登録されていません。");
-            return false;
+            Bukkit.getLogger().warning("Economyサービスが登録されていません。")
+            return false
         }
 
-        economy = rsp.getProvider();
-        return economy != null;
+        economy = rsp.getProvider()
+        return economy != null
     }
 
-    public Economy getEconomy() {
-        return economy;
+    fun has(player: Player?, amount: Double): Boolean {
+        return economy != null && economy!!.has(player, amount)
     }
 
-    public boolean has(Player player, double amount) {
-        return economy != null && economy.has(player, amount);
-    }
-
-    public boolean withdraw(Player player, double amount) {
-        if (economy != null && economy.has(player, amount)) {
-            economy.withdrawPlayer(player, amount);
-            return true;
+    fun withdraw(player: Player?, amount: Double): Boolean {
+        if (economy != null && economy!!.has(player, amount)) {
+            economy!!.withdrawPlayer(player, amount)
+            return true
         }
-        return false;
+        return false
     }
 
-    public void deposit(Player player, double amount) {
+    fun deposit(player: Player?, amount: Double) {
         if (economy != null) {
-            economy.depositPlayer(player, amount);
+            economy!!.depositPlayer(player, amount)
         }
     }
 }

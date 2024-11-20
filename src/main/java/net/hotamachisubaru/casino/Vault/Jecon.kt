@@ -1,53 +1,46 @@
-package net.hotamachisubaru.casino.Vault;
+package net.hotamachisubaru.casino.Vault
 
-import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
+import net.milkbowl.vault.economy.Economy
+import org.bukkit.Bukkit
+import org.bukkit.entity.Player
 
-public class Jecon {
-    private static Economy econ = null;
-
-    public Jecon() {
-        if (!setupEconomy()) {
-            throw new IllegalStateException("Vault 経済プラグインが見つかりません!");
-        }
+class Jecon {
+    init {
+        check(setupEconomy()) { "Vault 経済プラグインが見つかりません!" }
     }
 
-    private boolean setupEconomy() {
+    private fun setupEconomy(): Boolean {
         if (Bukkit.getServer().getPluginManager().getPlugin("Vault") == null) {
-            return false;
+            return false
         }
-        RegisteredServiceProvider<Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
+        val rsp = Bukkit.getServer().getServicesManager().getRegistration<Economy?>(Economy::class.java)
         if (rsp == null) {
-            return false;
+            return false
         }
-        econ = rsp.getProvider();
-        return econ != null;
+        econ = rsp.getProvider()
+        return econ != null
     }
 
-    public boolean hasBalance(Player player, double amount) {
-        if (player == null) {
-            throw new IllegalArgumentException("player cannot be null");
-        }
-        return econ.has(player, amount);
+    fun hasBalance(player: Player, amount: Double): Boolean {
+        requireNotNull(player) { "player cannot be null" }
+        return econ!!.has(player, amount)
     }
 
-    public boolean withdraw(Player player, double amount) {
-        if (player == null) {
-            throw new IllegalArgumentException("player cannot be null");
-        }
+    fun withdraw(player: Player, amount: Double): Boolean {
+        requireNotNull(player) { "player cannot be null" }
         if (hasBalance(player, amount)) {
-            econ.withdrawPlayer(player, amount);
-            return true;
+            econ!!.withdrawPlayer(player, amount)
+            return true
         }
-        return false;
+        return false
     }
 
-    public void deposit(Player player, double amount) {
-        if (player == null) {
-            throw new IllegalArgumentException("player cannot be null");
-        }
-        econ.depositPlayer(player, amount);
+    fun deposit(player: Player, amount: Double) {
+        requireNotNull(player) { "player cannot be null" }
+        econ!!.depositPlayer(player, amount)
+    }
+
+    companion object {
+        private var econ: Economy? = null
     }
 }

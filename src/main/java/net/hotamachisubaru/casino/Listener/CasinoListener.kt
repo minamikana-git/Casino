@@ -1,41 +1,31 @@
-package net.hotamachisubaru.casino.Listener;
+package net.hotamachisubaru.casino.Listener
 
-import net.hotamachisubaru.casino.Slot.SlotMachine;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
+import net.hotamachisubaru.casino.Slot.SlotMachine
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.inventory.InventoryClickEvent
 
-public class CasinoListener implements Listener {
-
+class CasinoListener : Listener {
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        Player player = (Player) event.getWhoClicked();
-        Inventory clickedInventory = event.getClickedInventory();
+    fun onInventoryClick(event: InventoryClickEvent) {
+        if (event.getWhoClicked() !is Player) return
+        val player = event.getWhoClicked() as Player
+        val clickedInventory = event.getClickedInventory()
 
-        if (clickedInventory == null || !event.getView().getTitle().equals("カジノゲーム選択")) return;
+        if (clickedInventory == null || event.getView().getTitle() != "カジノゲーム選択") return
 
-        event.setCancelled(true);
+        event.setCancelled(true)
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getItemMeta() == null) return;
+        val clickedItem = event.getCurrentItem()
+        if (clickedItem == null || clickedItem.getItemMeta() == null) return
 
-        String itemName = clickedItem.getItemMeta().getDisplayName();
-        switch (itemName) {
-            case "スロットマシン":
-                SlotMachine.openSlotGUI(player);
-                break;
-            case "ルーレット":
-                player.performCommand("roulette");
-                break;
-            case "ブラックジャック":
-                player.performCommand("blackjack");
-                break;
-            default:
-                break;
+        val itemName = clickedItem.getItemMeta().getDisplayName()
+        when (itemName) {
+            "スロットマシン" -> SlotMachine.openSlotGUI(player)
+            "ルーレット" -> player.performCommand("roulette")
+            "ブラックジャック" -> player.performCommand("blackjack")
+            else -> {}
         }
     }
 }
