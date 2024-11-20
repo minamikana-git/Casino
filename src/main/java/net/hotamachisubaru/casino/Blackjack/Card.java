@@ -1,22 +1,26 @@
 package net.hotamachisubaru.casino.Blackjack;
 
+
+
 public class Card {
-    private int value; // カードの値 (1~13)
-    private int suit;  // スート (0~3)
+    private final Suit suit;
+    private final int value;
 
-    public Card(int value, int suit) {
-        this.value = value;
+    public Card(Suit suit, int value) {
         this.suit = suit;
-    }
-
-    public Card(String name, int value) {
+        this.value = value;
     }
 
     public int getValue() {
-        return value;
+        return value > 10 ? 10 : value; // J, Q, K は 10 として扱う
     }
 
+    @Override
     public String toString() {
-        return "値: " + value + ", スート: " + suit;
+        return suit + " " + value;
+    }
+
+    public enum Suit {
+        HEARTS, DIAMONDS, CLUBS, SPADES
     }
 }
