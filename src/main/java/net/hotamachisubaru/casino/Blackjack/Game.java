@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Game implements Listener {
+    private boolean doubleUpInProgress = false;
     private final Player player;
     private final Deck deck;
     private final List<Card> playerHand = new ArrayList<>();
@@ -48,6 +49,12 @@ public class Game implements Listener {
     public void startGame(double betAmount) {
         logDebug("ゲーム開始処理中...");
 
+        if (betAmount <= 0) {
+            player.sendMessage("賭け金は正の値を入力してください。");
+            logDebug("賭け金は正の値を入力してください。");
+            return;
+        }
+
         double playerBalance = economy.getBalance(player);
         logDebug("現在のプレイヤー残高: " + playerBalance);
 
@@ -57,11 +64,18 @@ public class Game implements Listener {
             return;
         }
 
+        if (gameState == GameState.IN_PROGRESS) {
+            player.sendMessage("ゲームは既に進行中です。");
+            logDebug("ゲームは既に進行中です。");
+            return;
+        }
+
         this.bet = betAmount;
         EconomyResponse response = economy.withdrawPlayer(player, bet);
         if (!response.transactionSuccess()) {
-            player.sendMessage("所持金が不足しています：" + response.errorMessage);
-            logDebug("トランザクション失敗: " + response.errorMessage);
+            String errorMessage = response.errorMessage != null ? response.errorMessage : "不明なエラー";
+            player.sendMessage("所持金が不足しています：" + errorMessage);
+            logDebug("トランザクション失敗: " + errorMessage);
             return;
         }
 
@@ -89,62 +103,64 @@ public class Game implements Listener {
         openBlackjackGUI();
     }
 
-    private boolean dealInitialCards() {
-        logDebug("初期カードを配布中...");
-        if (deck.getCards().size() < 4) {
-            logDebug("デッキに十分なカードがありません。");
+    public boolean dealInitialCards() {
+        if (deck.getCards().size() < 4) { // デッキのカードが4枚より少ない場合
             return false;
         }
-        playerHand.add(deck.drawCard());
-        playerHand.add(deck.drawCard());
-        dealerHand.add(deck.drawCard());
-        dealerHand.add(deck.drawCard());
-        logDebug("初期カード配布完了: プレイヤー手札=" + handToString(playerHand) + ", ディーラー手札=" + handToString(dealerHand));
+        playerHand.add(deck.remove(0)); // プレイヤー1枚目
+        dealerHand.add(deck.remove(0)); // ディーラー1枚目
+        playerHand.add(deck.remove(0)); // プレイヤー2枚目
+        dealerHand.add(deck.remove(0)); // ディーラー2枚目
         return true;
     }
 
     private void updateScores() {
         playerScore = calculateHandValue(playerHand);
         dealerScore = calculateHandValue(dealerHand);
-        logDebug("スコア更新: プレイヤー=" + playerScore + ", ディーラー=" + dealerScore);
+        if (playerScore > 21) {
+            endGame(false);  // バーストしている場合即終了
+        }
     }
-
     private int calculateHandValue(List<Card> hand) {
-        int value = 0;
+        int total = 0;
         int aceCount = 0;
 
-        // カードの値を計算
         for (Card card : hand) {
-            if (card.getName().equals("J") || card.getName().equals("Q") || card.getName().equals("K")) {
-                value += 10;
-            } else if (card.getName().equals("A")) {
-                aceCount++;  // エースは後で調整するため、カウントする
-                value += 11; // エースを最初は11として加算
+            int value = card.getValue();
+            if (value == 1) {
+                aceCount++;
+                total += 11; // エースは11として計算
+            } else if (value >= 10) {
+                total += 10; // 10, J, Q, K
             } else {
-                value += card.getValue();  // 数字カード
+                total += value;
             }
         }
 
-        // エースが11のままだと21を超える可能性があるので、その場合は11を1に調整
-        while (value > 21 && aceCount > 0) {
-            value -= 10;  // エースを1に変換
+        while (total > 21 && aceCount > 0) {
+            total -= 10; // 11を1に変更
             aceCount--;
         }
 
-        logDebug("手札の合計計算: 手札=" + handToString(hand) + " 合計=" + value);
-        return value;
+        return total;
     }
+
+
+
 
 
     private void displayHands() {
         player.sendMessage("あなたの手札: " + handToString(playerHand) + " （合計: " + playerScore + "）");
-        player.sendMessage("ディーラーの手札: " + dealerHand.get(0).getName() + " と隠されたカード");
-        logDebug("プレイヤー手札表示: " + handToString(playerHand) + " 合計: " + playerScore);
-        logDebug("ディーラー手札表示: " + dealerHand.get(0).getName() + " と隠されたカード");
+        player.sendMessage("ディーラーの手札: " + dealerHand.get(0) + " と隠されたカード");
+        logDebug("プレイヤー手札: " + handToString(playerHand));
+        logDebug("ディーラー手札: " + dealerHand.get(0));
     }
 
+
     private String handToString(List<Card> hand) {
-        return hand.stream().map(Card::getName).collect(Collectors.joining(", "));
+        return hand.stream()
+                .map(Card::toString)
+                .collect(Collectors.joining(", "));
     }
 
     private void openBlackjackGUI() {
@@ -152,20 +168,25 @@ public class Game implements Listener {
     }
 
     public void openBlackjackDoubleUpGUI() {
-        System.out.println("[Casino Debug] ダブルアップGUIを作成しています...");
+        if (player == null || !player.isOnline()) {
+            System.out.println("[Casino Debug] プレイヤーが無効です。ダブルアップGUIを開けません。");
+            return;
+        }
 
+        System.out.println("[Casino Debug] ダブルアップGUIを作成しています...");
         Inventory doubleUpGUI = Bukkit.createInventory(null, 9, "ダブルアップ！");
 
-        ItemStack doubleUpItem = new ItemStack(Material.GOLD_INGOT);  // アイテム例
+        ItemStack doubleUpItem = new ItemStack(Material.GOLD_INGOT);  // サンプルアイテム
         ItemMeta meta = doubleUpItem.getItemMeta();
         meta.setDisplayName("ダブルアップ");
         doubleUpItem.setItemMeta(meta);
 
-        doubleUpGUI.setItem(4, doubleUpItem);  // 中央に配置
-
+        doubleUpGUI.setItem(4, doubleUpItem); // 中央に配置
         System.out.println("[Casino Debug] ダブルアップGUIを開きます。");
+
         player.openInventory(doubleUpGUI);
     }
+
 
 
 
@@ -256,10 +277,10 @@ public class Game implements Listener {
         displayHands();
 
         if (playerScore > 21) {
-            player.sendMessage("あなたの手札が21を超えました。あなたの負けです！");
-            endGame(false);
+            endGame(false);  // バーストしたら即終了
         }
     }
+
 
     public void stand() {
         // プレイヤーがバーストしている場合はディーラーのターンを開始しない
@@ -304,29 +325,24 @@ public class Game implements Listener {
             economy.depositPlayer(player, bet * 2);  // 勝った場合、倍額を支給
             player.sendMessage("おめでとうございます！あなたの勝ちです！");
 
-            // デバッグログを追加
-            System.out.println("[Casino Debug] ダブルアップ画面を開きます。");
+            // ダブルアップがまだ進行していない場合のみ開く
+            if (!doubleUpInProgress) {
+                doubleUpInProgress = true;
+                System.out.println("[Casino Debug] ダブルアップ画面を開きます。");
 
-            // Bukkitのスケジューラを使用して非同期表示
-            Bukkit.getScheduler().runTask(Casino.getInstance(), new Runnable() {
-                @Override
-                public void run() {
+                Bukkit.getScheduler().runTask(Casino.getInstance(), () -> {
                     openBlackjackDoubleUpGUI();
-                }
-            });
-        } else {
-            if (playerScore > 21) {
-                player.sendMessage("あなたはバーストしました。ディーラーの勝ちです！");
-            } else {
-                player.sendMessage("残念、あなたは負けました！");
+                    doubleUpInProgress = false; // GUIを開いた後に解除
+                });
             }
+        } else {
+            player.sendMessage(playerScore > 21 ? "あなたはバーストしました。ディーラーの勝ちです！" : "残念、あなたは負けました！");
         }
         gameState = GameState.FINISHED;
 
-        // 終了時のGUI閉じ処理
-        Bukkit.getScheduler().runTask(Casino.getInstance(), () -> closeBlackjackGUI());
+        // ゲーム終了時にGUIを閉じる
+        Bukkit.getScheduler().runTask(Casino.getInstance(), this::closeBlackjackGUI);
     }
-
 
 
 

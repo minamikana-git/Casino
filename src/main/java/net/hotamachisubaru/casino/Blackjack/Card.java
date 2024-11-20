@@ -1,19 +1,22 @@
 package net.hotamachisubaru.casino.Blackjack;
 
 public class Card {
-    private final String name; // カード名（例： "2", "K", "A"）
-    private final int value;   // カードの値（例： 2, 10, 11）
+    private int value; // カードの値 (1~13)
+    private int suit;  // スート (0~3)
 
-    public Card(String name, int value) {
-        this.name = name;
+    public Card(int value, int suit) {
         this.value = value;
+        this.suit = suit;
     }
 
-    public String getName() {
-        return name;
+    public Card(String name, int value) {
     }
 
     public int getValue() {
         return value;
+    }
+
+    public String toString() {
+        return "値: " + value + ", スート: " + suit;
     }
 }

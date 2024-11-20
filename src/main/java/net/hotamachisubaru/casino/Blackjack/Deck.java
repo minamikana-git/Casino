@@ -32,5 +32,24 @@ public class Deck {
     public List<Card> getCards() {
         return cards;
     }
+
+    private List<Card> initializeDeck() {
+        List<Card> deck = new ArrayList<>();
+        for (int i = 1; i <= 13; i++) { // 1~13はカードのランク
+            for (int j = 0; j < 4; j++) { // 4スート（ハート、ダイヤ、スペード、クラブ）
+                deck.add(new Card(i, j));
+            }
+        }
+        Collections.shuffle(deck); // シャッフル
+        return deck;
+    }
+
+    public Card remove(int i) {
+        if (i < 0 || i >= cards.size()) {
+            throw new IndexOutOfBoundsException("指定されたインデックスが範囲外です: " + i);
+        }
+        return cards.remove(i);
+    }
+
 }
 
