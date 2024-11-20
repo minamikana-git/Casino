@@ -124,10 +124,9 @@ public class Game implements Listener {
     private int calculateHandValue(List<Card> hand) {
         int total = 0;
         int aceCount = 0;
-
         for (Card card : hand) {
             int value = card.getValue();
-            if (value == 1) {
+            if (value == 11) {
                 aceCount++;
                 total += 11; // エースは11として計算
             } else if (value >= 10) {
@@ -136,15 +135,12 @@ public class Game implements Listener {
                 total += value;
             }
         }
-
         while (total > 21 && aceCount > 0) {
             total -= 10; // 11を1に変更
             aceCount--;
         }
-
         return total;
     }
-
 
 
 
