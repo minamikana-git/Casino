@@ -4,8 +4,9 @@ import net.hotamachisubaru.casino.Commands.*;
 import net.hotamachisubaru.casino.GUI.CasinoGUI;
 import net.hotamachisubaru.casino.Listener.BlackjackChatListener;
 import net.hotamachisubaru.casino.Listener.CasinoListener;
-import net.hotamachisubaru.casino.Roulette.RouletteClickListener;
-import net.hotamachisubaru.casino.Vault.Jecon;
+import net.hotamachisubaru.casino.Listener.RouletteGUIListener;
+import net.hotamachisubaru.casino.Manager.BetManager;
+import net.hotamachisubaru.casino.Listener.RouletteClickListener;
 import net.hotamachisubaru.casino.Vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Material;
@@ -31,6 +32,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     private static Casino instance;
     private int minimumBet;
     private int maximumBet;
+    private BetManager betManager;
     private List<Material> slotItems = new ArrayList<>();
 
 
@@ -43,6 +45,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         CasinoGUI casinoGUI = new CasinoGUI(this); // CasinoGUI インスタンスを作成
         setupCommands();
         registerEvents();
+        betManager = new BetManager();
     }
 
     private void setupCasino() {
@@ -141,13 +144,18 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return economy;
     }
 
+    public BetManager getBetManager() {
+        return betManager;
+    }
+
     private void registerEvents() {
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
         getServer().getPluginManager().registerEvents(new CasinoListener(), this);
         getServer().getPluginManager().registerEvents(new BlackjackChatListener(this),this);
-        // CasinoGUI のインスタンスを生成し、プラグインのインスタンスを渡す
-        CasinoGUI casinoGUI = new CasinoGUI(this);
+        CasinoGUI casinoGUI = new CasinoGUI(this);// CasinoGUI のインスタンスを生成し、プラグインのインスタンスを渡す
         getServer().getPluginManager().registerEvents(casinoGUI, this);
+        getServer().getPluginManager().registerEvents(new RouletteGUIListener(), this);
+        getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
     }
 
     public Casino () {
