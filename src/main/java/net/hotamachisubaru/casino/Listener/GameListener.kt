@@ -1,37 +1,26 @@
-package net.hotamachisubaru.casino.Listener;
+package net.hotamachisubaru.casino.Listener
 
-import net.hotamachisubaru.casino.Blackjack.Game;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.ItemStack;
+import net.hotamachisubaru.casino.Blackjack.Game
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.inventory.InventoryClickEvent
 
-public class GameListener implements Listener {
-    private final Game game;
-
-    public GameListener(Game game) {
-        this.game = game;
-    }
-
+class GameListener(private val game: Game) : Listener {
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals("ブラックジャック: アクションを選択")) {
-            handleBlackjackAction(event);
+    fun onInventoryClick(event: InventoryClickEvent) {
+        if (event.getView().getTitle() == "ブラックジャック: アクションを選択") {
+            handleBlackjackAction(event)
         }
     }
 
-    private void handleBlackjackAction(InventoryClickEvent event) {
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || !clickedItem.hasItemMeta()) return;
+    private fun handleBlackjackAction(event: InventoryClickEvent) {
+        val clickedItem = event.getCurrentItem()
+        if (clickedItem == null || !clickedItem.hasItemMeta()) return
 
-        String itemName = clickedItem.getItemMeta().getDisplayName();
-        switch (itemName) {
-            case "ヒット":
-                game.hit();
-                break;
-            case "スタンド":
-                game.stand();
-                break;
+        val itemName = clickedItem.getItemMeta().getDisplayName()
+        when (itemName) {
+            "ヒット" -> game.hit()
+            "スタンド" -> game.stand()
         }
     }
 }
