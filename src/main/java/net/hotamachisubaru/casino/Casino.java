@@ -38,6 +38,8 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        reloadConfig();
         vault = new Vault();
         instance = this;
         setupCasino();
@@ -49,22 +51,11 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     }
 
     private void setupCasino() {
-        // roulette.ymlの設定読み込み
-        File rouletteFile = new File(getDataFolder(), "roulette.yml");
-        if (!rouletteFile.exists()) {
-            saveResource("roulette.yml", false);
-        }
-        rouletteConfig = YamlConfiguration.loadConfiguration(rouletteFile);
-
-        // slot.ymlの設定読み込み
-        File slotFile = new File(getDataFolder(), "slot.yml");
-        if (!slotFile.exists()) {
-            saveResource("slot.yml", false);
-        }
-        slotConfig = YamlConfiguration.loadConfiguration(slotFile);
+        // config.ymlの設定読み込み
+        reloadConfig();
 
         // slot_itemsの読み込み
-        List<String> items = slotConfig.getStringList("slot_items");
+        List<String> items = getConfig().getStringList("slot_items");
         slotItems.clear();
         for (String itemName : items) {
             Material material = Material.getMaterial(itemName);
@@ -75,46 +66,24 @@ public class Casino extends JavaPlugin implements CommandExecutor {
             }
         }
 
-        // chips.ymlの設定読み込み
-        File chipsFile = new File(getDataFolder(), "chips.yml");
-        if (!chipsFile.exists()) {
-            saveResource("chips.yml", false);
-        }
-        chipsConfig = YamlConfiguration.loadConfiguration(chipsFile);
-
-        //jackpot.ymlの設定読み込み
-        File jackpotFile = new File(getDataFolder(), "jackpot.yml");
-        if (!jackpotFile.exists()) {
-            saveResource("jackpot.yml", false);
-        }
-        jackpotConfig = YamlConfiguration.loadConfiguration(jackpotFile);
-
         // 最低・最大チップの設定読み込み
-        minimumBet = chipsConfig.getInt("minimum_bet", 10);  // デフォルト値は10
-        maximumBet = chipsConfig.getInt("maximum_bet", 10000); // デフォルト値は10000
+        minimumBet = getConfig().getInt("minimum_bet", 10);  // デフォルト値は10
+        maximumBet = getConfig().getInt("maximum_bet", 10000); // デフォルト値は10000
     }
 
     public int getJackpotAmount() {
-        return jackpotConfig.getInt("jackpot_amount", 5000);
+        return getConfig().getInt("jackpot_amount", 5000);
     }
 
     public void addToJackpot(int amount) {
         int currentAmount = getJackpotAmount();
-        jackpotConfig.set("jackpot_amount", currentAmount + amount);
-        saveJackpotConfig();
+        getConfig().set("jackpot_amount", currentAmount + amount);
+        saveConfig();
     }
 
     public void resetJackpot() {
-        jackpotConfig.set("jackpot_amount", 5000);  // リセット時の初期金額
-        saveJackpotConfig();
-    }
-
-    private void saveJackpotConfig() {
-        try {
-            jackpotConfig.save(new File(getDataFolder(), "jackpot.yml"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        getConfig().set("jackpot_amount", 5000);  // リセット時の初期金額
+        saveConfig();
     }
     public FileConfiguration getRouletteConfig() {
         return rouletteConfig;

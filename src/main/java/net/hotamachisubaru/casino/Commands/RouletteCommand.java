@@ -1,6 +1,7 @@
 package net.hotamachisubaru.casino.Commands;
 
 import net.hotamachisubaru.casino.Casino;
+import net.hotamachisubaru.casino.Roulette.Roulette;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -8,6 +9,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class RouletteCommand implements CommandExecutor {
+
+
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -18,6 +21,10 @@ public class RouletteCommand implements CommandExecutor {
 
         Player player = (Player) sender;
         Casino plugin = Casino.getPlugin(Casino.class);
+
+        // 現在のジャックポット枚数を取得
+        int jackpotAmount = plugin.getJackpotAmount();
+        player.sendMessage("現在のジャックポット: " + jackpotAmount + " チップ");
 
         // 引数が不足している場合
         if (args.length < 1) {
@@ -35,8 +42,9 @@ public class RouletteCommand implements CommandExecutor {
         }
 
         // 賭け金が最低・最大金額に収まるか確認
-        int minBet = plugin.getConfig().getInt("min_bet", 10);
-        int maxBet = plugin.getConfig().getInt("max_bet", 1000);
+        int minBet = plugin.getConfig().getInt("roulette.min_bet");
+        int maxBet = plugin.getConfig().getInt("roulette.max_bet");
+
         if (betAmount < minBet || betAmount > maxBet) {
             player.sendMessage("賭け金は " + minBet + " 以上 " + maxBet + " 以下で指定してください。");
             return true;
@@ -49,7 +57,7 @@ public class RouletteCommand implements CommandExecutor {
         }
 
         // 賭け金を保存してGUIを開く
-        plugin.getBetManager().setBet(player, betAmount); // 仮のBetManagerクラスを利用
+        plugin.getBetManager().setBet(player, betAmount);
         Roulette.openRouletteGUI(player);
         return true;
     }

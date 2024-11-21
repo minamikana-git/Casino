@@ -1,5 +1,5 @@
 name: Casino
-version: '1.21.1-beta'
+version: '1.21.1'
 main: net.hotamachisubaru.casino.Casino
 api-version: '1.21'
 depend:
