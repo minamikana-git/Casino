@@ -1,5 +1,5 @@
 package net.hotamachisubaru.casino.Blackjack;
-import net.hotamachisubaru.casino.*;
+
 import net.hotamachisubaru.casino.Casino;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -12,7 +12,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,11 +40,11 @@ public class Game implements Listener {
         this.deck = new Deck();
         deck.shuffle();
         Bukkit.getPluginManager().registerEvents(this, Casino.getInstance());
-        logDebug("Game initialized: Player=" + player.getName() + ", Bet=" + bet);
+        Bukkit.getLogger().info("Game initialized: Player=" + player.getName() + ", Bet=" + bet);
     }
 
     private void logDebug(String message) {
-        System.out.println("[Casino Debug] " + message);
+       Bukkit.getLogger().info("[Casino Debug] " + message);
     }
 
     public void startGame(double betAmount) {
@@ -54,7 +53,7 @@ public class Game implements Listener {
 
         if (!dealInitialCards()) {
             player.sendMessage("デッキに十分なカードがありません。ゲームを中止します。");
-            logDebug("デッキに十分なカードがありません。");
+            Bukkit.getLogger().info("[Casino Debug] デッキに十分なカードがありません。");
             return;
         }
 
@@ -87,7 +86,7 @@ public class Game implements Listener {
         playerHand.clear();
         dealerHand.clear();
         gameState = GameState.IN_PROGRESS;
-        logDebug("Game state set to IN_PROGRESS");
+        Bukkit.getLogger().info("[Casino Debug] Game state set to IN_PROGRESS");
     }
 
     private boolean withdrawBet(double amount) {
@@ -96,7 +95,7 @@ public class Game implements Listener {
             sendError("賭け金の引き落としに失敗しました: " + response.errorMessage);
             return false;
         }
-        logDebug("Bet withdrawn: " + amount + ", Remaining Balance: " + economy.getBalance(player));
+        Bukkit.getLogger().info("[Casino Debug] Bet withdrawn: " + amount + ", Remaining Balance: " + economy.getBalance(player));
         return true;
     }
 
@@ -136,8 +135,8 @@ public class Game implements Listener {
     private void displayHands() {
         player.sendMessage("あなたの手札: " + handToString(playerHand) + " （合計: " + playerScore + "）");
         player.sendMessage("ディーラーの手札: " + dealerHand.get(0) + " と隠されたカード");
-        logDebug("Player hand: " + handToString(playerHand));
-        logDebug("Dealer hand: " + dealerHand.get(0));
+        Bukkit.getLogger().info("[Casino Debug] Player hand: " + handToString(playerHand));
+        Bukkit.getLogger().info("[Casino Debug] Dealer hand: " + dealerHand.get(0));
     }
 
     private String handToString(List<Card> hand) {
@@ -176,7 +175,7 @@ public class Game implements Listener {
 
     private void sendError(String message) {
         player.sendMessage(message);
-        logDebug(message);
+        Bukkit.getLogger().info("[Casino Debug] " + message);
     }
 
     @EventHandler
