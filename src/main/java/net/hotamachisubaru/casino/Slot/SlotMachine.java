@@ -24,12 +24,12 @@ public class SlotMachine {
             {2, 4, 6}  // Diagonal
     };
 
-    // 賭け金の設定
-    // 最大賭け金
+
+
 
     public static void startBetting(Player player) {
-        int MIN_BET = plugin.getMinimumBet();
-        int MAX_BET = plugin.getMaximumBet();
+        int MIN_BET = plugin.getMinimumBet(); // 最小賭け金
+        int MAX_BET = plugin.getMaximumBet(); // 最大賭け金
 
         player.sendMessage("スロットマシンに挑戦します！賭け金を入力してください (最低: " + MIN_BET + "、最大: " + MAX_BET + ")");
 

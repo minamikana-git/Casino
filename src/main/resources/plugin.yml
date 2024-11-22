@@ -22,3 +22,21 @@ commands:
   casino:
     description: カジノメニューを開きます。
     usage: /casino
+  setjackpot:
+    description: ジャックポットの値を設定する。
+    usage: /setjackpot <amount>
+    permission: op
+  jackpotrate:
+    description: ジャックポットの上昇率を設定する。
+    usage: /jackpotrate <rate>
+    permission: op
+
+permission:
+  casino.jackpot:
+    description: ジャックポットの値を設定します。
+    usage: /setjackpot <amount>
+    permission: casino.jackpot
+  casino.jackpot.rate:
+    description: ジャックポットの上昇率を設定する。
+    usage: /jackpotrate <rate>
+    permission: casino.jackpot.rate

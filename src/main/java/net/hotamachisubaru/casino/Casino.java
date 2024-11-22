@@ -156,6 +156,8 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         getCommand("buychips").setExecutor(new BuyChip(this));
         getCommand("blackjack").setExecutor(new BlackjackCommand());
         getCommand("casino").setExecutor(new OpenCasinoCommand());
+        getCommand("setjackpot").setExecutor(new JackpotCommand());
+        getCommand("jackpotrate").setExecutor(new JackpotRateCommand());
     }
 
 
