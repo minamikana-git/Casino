@@ -12,31 +12,42 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.jetbrains.annotations.NotNull;
 
 public class ChatListener implements Listener {
+    private static final String ALREADY_WAITING_MESSAGE = "既に入力待ちの操作があります。完了してからもう一度試してください。";
+    private static final String INPUT_PROMPT_MESSAGE = "チャットに入力してください。";
+    private static final String TIMEOUT_MESSAGE = "入力の時間切れです。もう一度試してください。";
+    private static final long TIMEOUT_DELAY = 20L * 60; // 60秒後
 
     private final ConcurrentHashMap<UUID, Consumer<String>> listeners = new ConcurrentHashMap<>();
 
-    public void waitForInput(Player player, Consumer<String> consumer) {
-        if (listeners.containsKey(player.getUniqueId())) {
-            player.sendMessage("既に入力待ちの操作があります。完了してからもう一度試してください。");
-            return;
-        }
+    public void waitForInput(@NotNull Player player, @NotNull Consumer<String> consumer) {
+        UUID playerId = player.getUniqueId();
+        if (checkIfAlreadyWaiting(player, playerId)) return;
 
-        listeners.put(player.getUniqueId(), consumer);
-        player.sendMessage("チャットに入力してください。");
-
-        // タイムアウト処理
-        Bukkit.getScheduler().runTaskLater(Casino.getInstance(), () -> {
-            if (listeners.containsKey(player.getUniqueId())) {
-                listeners.remove(player.getUniqueId());
-                player.sendMessage("入力の時間切れです。もう一度試してください。");
-            }
-        }, 20L * 60); // 60秒後
+        listeners.put(playerId, consumer);
+        player.sendMessage(INPUT_PROMPT_MESSAGE);
+        scheduleTimeout(player, playerId);
     }
 
-    public void onChat(AsyncPlayerChatEvent event) {
+    private boolean checkIfAlreadyWaiting(Player player, UUID playerId) {
+        if (listeners.containsKey(playerId)) {
+            player.sendMessage(ALREADY_WAITING_MESSAGE);
+            return true;
+        }
+        return false;
+    }
+
+    private void scheduleTimeout(@NotNull Player player, UUID playerId) {
+        Bukkit.getScheduler().runTaskLater(Casino.getInstance(), () -> {
+            if (listeners.containsKey(playerId)) {
+                listeners.remove(playerId);
+                player.sendMessage(TIMEOUT_MESSAGE);
+            }
+        }, TIMEOUT_DELAY);
+    }
+
+    public void onChat(@NotNull AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-
         if (listeners.containsKey(uuid)) {
             Consumer<String> consumer = listeners.get(uuid);
             listeners.remove(uuid); // 処理後に削除

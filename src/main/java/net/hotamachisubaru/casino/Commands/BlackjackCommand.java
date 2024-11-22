@@ -9,6 +9,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class BlackjackCommand implements CommandExecutor {
+
+    private static final double DEFAULT_BET_AMOUNT = 100.0;
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
@@ -17,26 +20,28 @@ public class BlackjackCommand implements CommandExecutor {
         }
 
         Player player = (Player) sender;
+        Economy economy = initializeEconomy();
+        double betAmount = DEFAULT_BET_AMOUNT;
 
-        // Economyの初期化（Vaultが正しくセットアップされている必要があります）
-        Economy economy = Casino.getEconomy();
+        double playerBalance = economy.getBalance(player);
+        player.sendMessage("現在の所持金: " + playerBalance);
 
-        // 賭け金のデフォルト値
-        double betAmount = 100.0;
-
-        // プレイヤーの所持金を確認してデバッグ
-        double balance = economy.getBalance(player);
-        player.sendMessage("現在の所持金: " + balance);
-
-        if (balance < betAmount) {
-            player.sendMessage("所持金が不足しています。ブラックジャックを開始できません。");
+        if (playerBalance < betAmount) {
+            sendPlayerMessage(player, "所持金が不足しています。ブラックジャックを開始できません。");
             return true;
         }
 
-        // ゲームを開始
         Game blackjackGame = new Game(player, economy, betAmount);
         blackjackGame.startGame(betAmount);
-
         return true;
+    }
+
+    private Economy initializeEconomy() {
+        // Economyの初期化（Vaultが正しくセットアップされている必要があります）
+        return Casino.getEconomy();
+    }
+
+    private void sendPlayerMessage(Player player, String message) {
+        player.sendMessage(message);
     }
 }

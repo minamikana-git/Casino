@@ -4,20 +4,24 @@ import org.bukkit.Material;
 
 import java.util.Map;
 
+// クラス名を目的に合わせてリネーム
 public class SlotResult {
-    private final boolean win;
-    private final Map<Material, Integer> rewards;
+    // 不変性を保つために一貫した修飾子 (final) を使用
+    private final boolean isWinning;
+    private final Map<Material, Integer> rewardItems;
 
-    public SlotResult(boolean win, Map<Material, Integer> rewards) {
-        this.win = win;
-        this.rewards = rewards;
+    // 明確さのために記述的なパラメータ名を使用
+    public SlotResult(boolean isWinning, Map<Material, Integer> rewardItems) {
+        this.isWinning = isWinning;
+        this.rewardItems = rewardItems;
     }
 
-    public boolean isWin() {
-        return win;
+    // 明確さのために一貫したメソッド命名
+    public boolean isWinning() {
+        return isWinning;
     }
 
-    public Map<Material, Integer> getRewards() {
-        return rewards;
+    public Map<Material, Integer> getRewardItems() {
+        return rewardItems;
     }
 }

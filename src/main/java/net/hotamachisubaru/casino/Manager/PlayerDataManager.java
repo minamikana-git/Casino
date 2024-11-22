@@ -12,40 +12,49 @@ import java.util.UUID;
 
 public class PlayerDataManager {
 
-    public static final JavaPlugin plugin = JavaPlugin.getPlugin(Casino.class); // プラグインインスタンス
+    private final JavaPlugin plugin;
+    private final File playerFile;
+    private final FileConfiguration playerData;
 
-    // player.yml ファイルのパス
-    private static File playerFile = new File(plugin.getDataFolder(), "player.yml");
-    private static FileConfiguration playerData = YamlConfiguration.loadConfiguration(playerFile);
+    public PlayerDataManager() {
+        this.plugin = JavaPlugin.getPlugin(Casino.class); // プラグインインスタンス
+        this.playerFile = new File(plugin.getDataFolder(), "player.yml");
+        this.playerData = YamlConfiguration.loadConfiguration(playerFile);
+    }
 
-    // プレイヤーのチップ数を保存
-    public static void savePlayerChips(Player player, int chips) {
-        UUID playerUUID = player.getUniqueId();
-        playerData.set(playerUUID.toString() + ".chips", chips);
-
+    private void saveConfig() {
         try {
             playerData.save(playerFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void setPlayerChipsData(UUID playerUUID, String key, int value) {
+        playerData.set(playerUUID.toString() + key, value);
+        saveConfig();
+    }
+
+    private int getPlayerChipsData(UUID playerUUID, String key, int defaultValue) {
+        return playerData.getInt(playerUUID.toString() + key, defaultValue);
+    }
+
+    // プレイヤーのチップ数を保存
+    public void savePlayerChips(Player player, int chips) {
+        UUID playerUUID = player.getUniqueId();
+        setPlayerChipsData(playerUUID, ".chips", chips);
     }
 
     // プレイヤーのチップ数を読み込む
-    public static int getPlayerChips(Player player) {
+    public int getPlayerChips(Player player) {
         UUID playerUUID = player.getUniqueId();
-        return playerData.getInt(playerUUID.toString() + ".chips", 0); // デフォルトは0
+        return getPlayerChipsData(playerUUID, ".chips", 0); // デフォルトは0
     }
 
-    // プレイヤーのデータをリセット（任意）
-    public static void resetPlayerData(Player player) {
+    // プレイヤーのデータをリセット
+    public void resetPlayerData(Player player) {
         UUID playerUUID = player.getUniqueId();
         playerData.set(playerUUID.toString(), null);
-
-        try {
-            playerData.save(playerFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        saveConfig();
     }
 }
-

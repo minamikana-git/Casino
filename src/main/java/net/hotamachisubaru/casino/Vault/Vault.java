@@ -1,40 +1,29 @@
 package net.hotamachisubaru.casino.Vault;
 
+import net.hotamachisubaru.casino.economy.EconomySetupHelper;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-public class Vault {
+public class Vault  {
+    private static final String ECONOMY_PLUGIN_NAME = "Vault";
     private Economy economy = null;
 
     public Vault() {
-        if (!setupEconomy()) {
+        EconomySetupHelper setupHelper = new EconomySetupHelper();
+        if (!setupHelper.setupEconomy()) {
             Bukkit.getLogger().warning("Vaultのセットアップに失敗しました。");
+        } else {
+            economy = setupHelper.getEconomy();
         }
-    }
-
-    private boolean setupEconomy() {
-        if (Bukkit.getServer().getPluginManager().getPlugin("Vault") == null) {
-            Bukkit.getLogger().warning("Vaultプラグインが見つかりません。");
-            return false;
-        }
-
-        var rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp == null) {
-            Bukkit.getLogger().warning("Economyサービスが登録されていません。");
-            return false;
-        }
-
-        economy = rsp.getProvider();
-        return economy != null;
     }
 
     public boolean has(Player player, double amount) {
-        return economy != null && economy.has(player, amount);
+        return isEconomySetup() && economy.has(player, amount);
     }
 
     public boolean withdraw(Player player, double amount) {
-        if (economy != null && economy.has(player, amount)) {
+        if (has(player, amount)) {
             economy.withdrawPlayer(player, amount);
             return true;
         }
@@ -42,12 +31,16 @@ public class Vault {
     }
 
     public void deposit(Player player, double amount) {
-        if (economy != null) {
+        if (isEconomySetup()) {
             economy.depositPlayer(player, amount);
         }
     }
 
     public Economy getEconomy() {
         return economy;
+    }
+
+    private boolean isEconomySetup() {
+        return economy != null;
     }
 }

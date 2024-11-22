@@ -5,20 +5,20 @@ chips:
 
 jackpot:
   # ジャックポット関連の設定
-  increase_rate: 0.05
-  win_chance: 0.01
-  initial_amount: 1000
+  increase_rate: 0.1
+  win_chance: 0.05
+  initial_amount: 5000
 
 roulette:
   # ルーレット関連の設定
-  min_bet: 10
-  max_bet: 10000
+  MinimumBet: 10
+  MaximumBet: 10000
   rewards:
     red_black_multiplier: 2
     green_multiplier: 5
 
 slot:
   # スロット関連の設定
-  min_bet: 10
-  max_bet: 50000
-  jackpot_chance: 0.005
+  MinimumBet: 10
+  MaximumBet: 50000
+  jackpot_chance: 0.05

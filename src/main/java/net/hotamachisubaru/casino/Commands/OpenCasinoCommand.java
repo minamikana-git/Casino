@@ -9,22 +9,23 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class OpenCasinoCommand implements CommandExecutor {
-
-    private CasinoGUI casinoGUI;
+    private CasinoGUI casinoGui;
 
     public OpenCasinoCommand() {
-     this.casinoGUI = new CasinoGUI(Casino.getInstance());
+        this.casinoGui = new CasinoGUI(Casino.getInstance());
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!isPlayer(sender)) {
             sender.sendMessage("このコマンドはプレイヤーのみ使用可能です。");
             return false;
         }
-
-        Player player = (Player) sender;
-        casinoGUI.openCasinoGUI(player); // CasinoGUI インスタンスを使用してメソッドを呼び出し
+        casinoGui.openCasinoGUI((Player) sender);
         return true;
+    }
+
+    private boolean isPlayer(CommandSender sender) {
+        return sender instanceof Player;
     }
 }

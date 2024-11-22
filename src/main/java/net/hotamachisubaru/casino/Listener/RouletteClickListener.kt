@@ -9,39 +9,49 @@ import org.bukkit.inventory.ItemStack
 import java.util.Random
 
 class RouletteClickListener : Listener {
+
+    companion object {
+        private const val ROULETTE_TITLE = "ルーレットホイール"
+        private val OUTCOMES = arrayOf("赤", "黒", "緑")
+    }
+
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
-        if (event.getWhoClicked() !is Player) return
+        val player = getPlayer(event) ?: return
+        if (!isRouletteWheel(event)) return
 
-        val player = event.getWhoClicked() as Player
-        val clickedInventory = event.getClickedInventory()
-
-        // クリックしたインベントリがルーレットホイールかどうかをチェック
-        if (clickedInventory == null || event.getView().getTitle() != "ルーレットホイール") return
-
-        // クリックをキャンセルしてインベントリが変更されないようにする
         event.setCancelled(true)
+        val bet = getBet(event) ?: return
 
+        executeRoulette(player, bet)
+    }
+
+    private fun getPlayer(event: InventoryClickEvent): Player? {
+        return event.getWhoClicked() as? Player
+    }
+
+    private fun isRouletteWheel(event: InventoryClickEvent): Boolean {
+        return event.getClickedInventory() != null && event.getView().getTitle() == ROULETTE_TITLE
+    }
+
+    private fun getBet(event: InventoryClickEvent): String? {
         val clickedItem = event.getCurrentItem()
-        if (clickedItem != null && clickedItem.getItemMeta() != null) {
-            val bet = clickedItem.getItemMeta().getDisplayName()
-            executeRoulette(player, bet)
-        }
+        return clickedItem?.itemMeta?.displayName
     }
 
     private fun executeRoulette(player: Player, bet: String) {
-        // ルーレットの結果をランダムに決定
-        val outcomes = arrayOf<String>("赤", "黒", "緑")
-        val result = outcomes[Random().nextInt(outcomes.size)]
+        val result = OUTCOMES[Random().nextInt(OUTCOMES.size)]
+        sendMessage(player, "ルーレットは $result に止まりました！")
 
-        player.sendMessage("ルーレットは " + result + " に止まりました！")
-
-        // プレイヤーの賭けと結果を比較して勝敗を決定
         if (bet == result) {
-            player.sendMessage("おめでとう！勝ちました！")
-            player.getInventory().addItem(ItemStack(Material.DIAMOND, 5)) // 勝利報酬としてダイヤモンドを5つ与える
+            sendMessage(player, "おめでとう！勝ちました！")
+            player.inventory.addItem(ItemStack(Material.DIAMOND, 5))
         } else {
-            player.sendMessage("残念、負けました。次の挑戦をお待ちしています！")
+            sendMessage(player, "残念、負けました。次の挑戦をお待ちしています！")
         }
+    }
+
+    private fun sendMessage(player: Player, message: String) {
+        player.sendMessage(message)
     }
 }
