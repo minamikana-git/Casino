@@ -15,10 +15,6 @@ public class ChatListener implements Listener {
 
     private final ConcurrentHashMap<UUID, Consumer<String>> listeners = new ConcurrentHashMap<>();
 
-    public ChatListener(Casino casino) {
-        Bukkit.getServer().getPluginManager().registerEvents(this, casino);
-    }
-
     public void waitForInput(Player player, Consumer<String> consumer) {
         if (listeners.containsKey(player.getUniqueId())) {
             player.sendMessage("既に入力待ちの操作があります。完了してからもう一度試してください。");

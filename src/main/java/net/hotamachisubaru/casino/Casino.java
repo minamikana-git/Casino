@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Casino extends JavaPlugin implements CommandExecutor {
-    public ChatListener chatListener = new ChatListener(this);
+    public ChatListener chatListener = new ChatListener();
     private Vault vault;
     private static Economy economy;
     private static Casino instance;
@@ -120,7 +120,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         getServer().getPluginManager().registerEvents(casinoGUI, this);
         getServer().getPluginManager().registerEvents(new RouletteGUIListener(), this);
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
-        getServer().getPluginManager().registerEvents(new ChatListener(this), this);
+        getServer().getPluginManager().registerEvents(new ChatListener(), this);
     }
 
     public Casino() {
