@@ -79,9 +79,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         getConfig().set("jackpot_amount", 5000);  // リセット時の初期金額
         saveConfig();
     }
-    // public FileConfiguration getRouletteConfig() {
-    //     return getConfig();
-    // }
+
 
     public List<Material> getSlotItems() {
         return slotItems;
@@ -95,9 +93,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return maximumBet;
     }
 
-    // public FileConfiguration getJackpotConfig() {
-    //     return getConfig();
-    // }
+
 
     public Vault getVault() {
         return vault;
