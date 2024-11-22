@@ -46,6 +46,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     private void setupCasino() {
         // config.ymlの設定読み込み
         reloadConfig();
+        saveResource("player.yml", false);
 
         // slot_itemsの読み込み
         List<String> items = getConfig().getStringList("slot_items");
@@ -210,5 +211,10 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
     public ChatListener getChatListener() {
         return chatListener;
+    }
+
+    public void setJackpotAmount(int newJackpotAmount) {
+        getConfig().set("jackpot_amount", newJackpotAmount);
+        saveConfig();
     }
 }
