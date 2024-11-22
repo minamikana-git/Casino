@@ -203,7 +203,20 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        // Plugin停止時の処理を追加します
+
+
+        // 必要に応じて設定を保存します
+        saveConfig();
+
+        // 必要に応じて他のリソースをクリーンアップします
+        chatListener = null;
+        vault = null;
+        betManager = null;
+        instance = null;
+
+        // その他終了時に必要なロジックを追加
+
     }
 
 
