@@ -7,103 +7,146 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class SlotMachine {
 
-    public static final Casino plugin = Casino.getPlugin(Casino.class);
+    private static final Casino plugin = Casino.getPlugin(Casino.class);
 
-    public static void openSlotGUI(Player player) {
-        Inventory slotGUI = Bukkit.createInventory(null, 9, "スロットマシン");
+    // 賭け金の設定
+    private static final int MIN_BET = 1000; // 最低賭け金
+    private static final int MAX_BET = 50000; // 最大賭け金
 
-        // 初期状態のスロットをセットアップ
+    public static void startBetting(Player player) {
+        player.sendMessage("スロットマシンに挑戦します！賭け金を入力してください (最低: " + MIN_BET + "、最大: " + MAX_BET + ")");
+
+        // チャットで賭け金を入力させる例
+        plugin.getChatListener().wait(player, input -> {
+            try {
+                int betAmount = Integer.parseInt(input);
+
+                if (betAmount < MIN_BET || betAmount > MAX_BET) {
+                    player.sendMessage("賭け金は " + MIN_BET + " から " + MAX_BET + " の間で入力してください。");
+                    return;
+                }
+
+                // 賭け金チェック
+                if (!plugin.getEconomy().has(player, betAmount)) {
+                    player.sendMessage("残高が不足しています。必要額: " + betAmount);
+                    return;
+                }
+
+                // 賭け金を差し引く
+                plugin.getEconomy().withdrawPlayer(player, betAmount);
+                player.sendMessage("賭け金 " + betAmount + " を設定しました！スロットを回します...");
+
+                // ジャックポットに賭け金の一部を加算
+                addToJackpotFromBet(betAmount);
+
+                // スロットGUIを開く
+                openSlotGUI(player, betAmount);
+
+            } catch (NumberFormatException e) {
+                player.sendMessage("賭け金は整数で入力してください。");
+            }
+        });
+    }
+
+    public static void openSlotGUI(Player player, int betAmount) {
+        Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
+
         for (int i = 0; i < 9; i++) {
             slotGUI.setItem(i, getRandomSlotItem());
         }
 
         player.openInventory(slotGUI);
 
-        // スロットの回転アニメーション
+        // スロット回転アニメーション
         new BukkitRunnable() {
-            int tick = 0;
+            int column = 0;
 
             @Override
             public void run() {
-                if (tick < 20) { // 20回アイテムを回転させる
-                    for (int i = 0; i < 9; i++) {
-                        slotGUI.setItem(i, getRandomSlotItem());
-                    }
-                    player.updateInventory();
-                    tick++;
+                if (column < 3) {
+                    stopColumn(slotGUI, column);
+                    column++;
                 } else {
-                    // 最終結果を表示し、報酬を与える
                     SlotResult result = calculateSlotResult(slotGUI);
-                    giveRewards(player, result);
-                    checkJackpot(player); // ジャックポットの抽選を追加
 
-                    // GUIを数秒後に閉じるタスクをスケジュール
+                    // 勝利時の報酬
+                    giveRewards(player, result, betAmount);
+
+                    // ジャックポットチェック
+                    checkJackpot(player);
+
+                    // 数秒後にGUIを閉じる
                     new BukkitRunnable() {
                         @Override
                         public void run() {
                             if (player.getOpenInventory() != null &&
                                     player.getOpenInventory().getTopInventory() == slotGUI) {
-                                player.closeInventory(); // GUIを閉じる
+                                player.closeInventory();
                             }
                         }
-                    }.runTaskLater(plugin, 60L); // 60L = 3秒後に実行
+                    }.runTaskLater(plugin, 60L);
 
-                    this.cancel(); // アニメーション終了
+                    this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 5L); // 5Lは0.25秒ごとに実行
+        }.runTaskTimer(plugin, 20L, 10L);
     }
 
-    // スロットのアイテムをランダムに取得するメソッド
-    @Nullable
+    private static void stopColumn(Inventory slotGUI, int column) {
+        Random random = new Random();
+        for (int row = 0; row < 3; row++) {
+            int index = row * 3 + column;
+            slotGUI.setItem(index, getRandomSlotItem());
+        }
+    }
+
     private static ItemStack getRandomSlotItem() {
         List<Material> slotItems = plugin.getSlotItems();
-        if (slotItems.isEmpty()) {
-            return null; // 設定ファイルにアイテムがない場合はnullを返す
-        }
-
+        if (slotItems.isEmpty()) return new ItemStack(Material.STONE);
         Material randomItem = slotItems.get(new Random().nextInt(slotItems.size()));
         return new ItemStack(randomItem);
     }
 
-    // スロットの結果を計算するメソッド
     private static SlotResult calculateSlotResult(Inventory slotGUI) {
-        // 例として、3つ同じアイテムが揃えば勝ち
-        ItemStack first = slotGUI.getItem(3);
-        ItemStack second = slotGUI.getItem(4);
-        ItemStack third = slotGUI.getItem(5);
+        Map<Material, Integer> payout = new HashMap<>();
+        for (int[] line : paylines) {
+            Material first = slotGUI.getItem(line[0]).getType();
+            boolean isWinningLine = Arrays.stream(line)
+                    .mapToObj(slotGUI::getItem)
+                    .allMatch(item -> item != null && item.getType() == first);
 
-        boolean win = first != null && second != null && third != null &&
-                first.getType() == second.getType() && second.getType() == third.getType();
-
-        return new SlotResult(win, first != null ? first.getType() : Material.AIR);
+            if (isWinningLine) {
+                payout.put(first, payout.getOrDefault(first, 0) + 1);
+            }
+        }
+        return new SlotResult(!payout.isEmpty(), payout);
     }
 
-    // プレイヤーに報酬を与えるメソッド
-    private static void giveRewards(Player player, SlotResult result) {
+    private static void giveRewards(Player player, SlotResult result, int betAmount) {
         if (result.isWin()) {
-            player.sendMessage("おめでとう！" + result.getRewardType() + "を獲得しました！");
-            player.getInventory().addItem(new ItemStack(result.getRewardType(), 5));
+            player.sendMessage("おめでとう！当たりラインがありました！");
+
+            // 報酬額計算
+            result.getRewards().forEach((type, count) -> {
+                int rewardAmount = (betAmount * count) / paylines; // 配当倍率
+                player.getInventory().addItem(new ItemStack(type, rewardAmount));
+                player.sendMessage(type + " のラインで " + rewardAmount + " 獲得！");
+            });
         } else {
             player.sendMessage("残念、今回はハズレです。");
         }
     }
 
-    // ジャックポットの抽選を行うメソッド
     private static void checkJackpot(Player player) {
-        double winChance = plugin.getJackpotConfig().getDouble("jackpot_win_chance", 0.01);
-
-        // ランダムに抽選
+        double winChance = plugin.getConfig().getDouble("jackpot_win_chance", 0.01);
         if (Math.random() < winChance) {
             int jackpotAmount = plugin.getJackpotAmount();
-            player.sendMessage("ジャックポット獲得！獲得額: " + jackpotAmount + " チップ！");
+            player.sendMessage("ジャックポット獲得！ " + jackpotAmount + " チップを獲得！");
             plugin.addChips(player, jackpotAmount);
             plugin.resetJackpot();
         } else {
@@ -111,10 +154,14 @@ public class SlotMachine {
         }
     }
 
-    // 賭け金の一部をジャックポットに加算するメソッド
     private static void addToJackpotFromBet(int betAmount) {
-        double increaseRate = plugin.getJackpotConfig().getDouble("jackpot_increase_rate", 0.05);
+        double increaseRate = plugin.getConfig().getDouble("jackpot_increase_rate", 0.05);
         int amountToAdd = (int) (betAmount * increaseRate);
         plugin.addToJackpot(amountToAdd);
+    }
+
+    public static void openSlotGUI(Player player) {
+        int betAmount = MIN_BET; // 仮に最低賭け金を設定
+        openSlotGUI(player, betAmount);
     }
 }

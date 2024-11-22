@@ -20,5 +20,5 @@ roulette:
 slot:
   # スロット関連の設定
   min_bet: 10
-  max_bet: 500
+  max_bet: 50000
   jackpot_chance: 0.005

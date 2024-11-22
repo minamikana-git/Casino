@@ -2,21 +2,22 @@ package net.hotamachisubaru.casino.Slot;
 
 import org.bukkit.Material;
 
+import java.util.Map;
+
 public class SlotResult {
     private final boolean win;
-    private final Material rewardType;
+    private final Map<Material, Integer> rewards;
 
-    public SlotResult(boolean win, Material rewardType) {
+    public SlotResult(boolean win, Map<Material, Integer> rewards) {
         this.win = win;
-        this.rewardType = rewardType;
+        this.rewards = rewards;
     }
 
     public boolean isWin() {
         return win;
     }
 
-    public Material getRewardType() {
-        return rewardType;
+    public Map<Material, Integer> getRewards() {
+        return rewards;
     }
 }
-

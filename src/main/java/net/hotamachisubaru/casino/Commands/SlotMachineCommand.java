@@ -12,7 +12,7 @@ public class SlotMachineCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
-            SlotMachine.openSlotGUI(player);
+            SlotMachine.openSlotGUI(player, Integer.parseInt(args[0]));
             return true;
         }
         sender.sendMessage("このコマンドはプレイヤーのみ使用可能です。");

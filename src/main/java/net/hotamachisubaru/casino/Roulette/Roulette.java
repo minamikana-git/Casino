@@ -12,14 +12,14 @@ import java.util.*;
 public class Roulette {
     private void addToJackpotFromBet(int betAmount) {
         Casino plugin = Casino.getPlugin(Casino.class);
-        double increaseRate = plugin.getJackpotConfig().getDouble("jackpot_increase_rate", 0.05);
+        double increaseRate = plugin.getConfig().getDouble("jackpot_increase_rate", 0.05);
         int amountToAdd = (int) (betAmount * increaseRate);
         plugin.addToJackpot(amountToAdd);
     }
 
     private void checkJackpot(Player player) {
         Casino plugin = Casino.getPlugin(Casino.class);
-        double winChance = plugin.getJackpotConfig().getDouble("jackpot_win_chance", 0.01);
+        double winChance = plugin.getConfig().getDouble("jackpot_win_chance", 0.01);
 
         // ランダムに抽選
         if (Math.random() < winChance) {

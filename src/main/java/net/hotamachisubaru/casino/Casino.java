@@ -1,18 +1,15 @@
 package net.hotamachisubaru.casino;
 
+
 import net.hotamachisubaru.casino.Commands.*;
 import net.hotamachisubaru.casino.GUI.CasinoGUI;
-import net.hotamachisubaru.casino.Listener.BlackjackChatListener;
-import net.hotamachisubaru.casino.Listener.CasinoListener;
-import net.hotamachisubaru.casino.Listener.RouletteGUIListener;
+import net.hotamachisubaru.casino.Listener.*;
 import net.hotamachisubaru.casino.Manager.BetManager;
-import net.hotamachisubaru.casino.Listener.RouletteClickListener;
 import net.hotamachisubaru.casino.Vault.Vault;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.CommandExecutor;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -23,17 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Casino extends JavaPlugin implements CommandExecutor {
+    public ChatListener chatListener = new ChatListener(this);
     private Vault vault;
     private static Economy economy;
-    private FileConfiguration slotConfig;
-    private FileConfiguration rouletteConfig;
-    private FileConfiguration chipsConfig;
-    private FileConfiguration jackpotConfig;
     private static Casino instance;
     private int minimumBet;
     private int maximumBet;
     private BetManager betManager;
-    private List<Material> slotItems = new ArrayList<>();
+    private final List<Material> slotItems = new ArrayList<>();
 
 
     @Override
@@ -44,7 +38,6 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         instance = this;
         setupCasino();
         setupEconomy();
-        CasinoGUI casinoGUI = new CasinoGUI(this); // CasinoGUI インスタンスを作成
         setupCommands();
         registerEvents();
         betManager = new BetManager();
@@ -85,9 +78,9 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         getConfig().set("jackpot_amount", 5000);  // リセット時の初期金額
         saveConfig();
     }
-    public FileConfiguration getRouletteConfig() {
-        return rouletteConfig;
-    }
+    // public FileConfiguration getRouletteConfig() {
+    //     return getConfig();
+    // }
 
     public List<Material> getSlotItems() {
         return slotItems;
@@ -101,9 +94,9 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return maximumBet;
     }
 
-    public FileConfiguration getJackpotConfig() {
-        return jackpotConfig;
-    }
+    // public FileConfiguration getJackpotConfig() {
+    //     return getConfig();
+    // }
 
     public Vault getVault() {
         return vault;
@@ -117,23 +110,26 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return betManager;
     }
 
+
     private void registerEvents() {
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
         getServer().getPluginManager().registerEvents(new CasinoListener(), this);
-        getServer().getPluginManager().registerEvents(new BlackjackChatListener(this),this);
+        getServer().getPluginManager().registerEvents(new BlackjackChatListener(this), this);
         CasinoGUI casinoGUI = new CasinoGUI(this);// CasinoGUI のインスタンスを生成し、プラグインのインスタンスを渡す
         getServer().getPluginManager().registerEvents(casinoGUI, this);
         getServer().getPluginManager().registerEvents(new RouletteGUIListener(), this);
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
+        getServer().getPluginManager().registerEvents(new ChatListener(this), this);
     }
 
-    public Casino () {
+    public Casino() {
         instance = this;
     }
 
     public static Casino getInstance() {
         return instance;
     }
+
     private boolean setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             getLogger().warning("§4エラー：Vaultプラグインが見つかりませんでした。");
@@ -162,21 +158,29 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     }
 
 
-
-
     public void addChips(Player player, int amount) {
         String playerUUID = player.getUniqueId().toString();
-        int currentChips = chipsConfig.getInt("players." + playerUUID + ".chips", 0);
-        chipsConfig.set("players." + playerUUID + ".chips", currentChips + amount);
+        int currentChips = getConfig().getInt("players." + playerUUID + ".chips", 0);
+        getConfig().set("players." + playerUUID + ".chips", currentChips + amount);
         saveChipsConfig();
         player.sendMessage("あなたは " + amount + " チップを獲得しました！現在のチップ数: " + (currentChips + amount));
     }
 
+    private void saveChipsConfig() {
+        try {
+            getConfig().save(new File(getDataFolder(), "player.yml"));
+        } catch (IOException e) {
+            Bukkit.getLogger().severe("Exception caught: " + e.getMessage());
+        }
+    }
+
     public void removeChips(Player player, int amount) {
         String playerUUID = player.getUniqueId().toString();
-        int currentChips = chipsConfig.getInt("players." + playerUUID + ".chips", 0);
+        int currentChips = getConfig().getInt("players." + playerUUID + ".chips", 0);
+
+        // チップ数が足りているか確認
         if (currentChips >= amount) {
-            chipsConfig.set("players." + playerUUID + ".chips", currentChips - amount);
+            getConfig().set("players." + playerUUID + ".chips", currentChips - amount);
             saveChipsConfig();
             player.sendMessage("あなたは " + amount + " チップを失いました。現在のチップ数: " + (currentChips - amount));
         } else {
@@ -184,21 +188,27 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         }
     }
 
+
     public int getChips(Player player) {
         String playerUUID = player.getUniqueId().toString();
-        return chipsConfig.getInt("players." + playerUUID + ".chips", 0);
+        return getConfig().getInt("players." + playerUUID + ".chips", 0);
     }
 
-    private void saveChipsConfig() {
+    public void saveConfig() {
         try {
-            chipsConfig.save(new File(getDataFolder(), "chips.yml"));
+            getConfig().save(new File(getDataFolder(), "config.yml"));
         } catch (IOException e) {
-            e.printStackTrace();
+            Bukkit.getLogger().severe("Exception caught: " + e.getMessage());
         }
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+    }
+
+
+    public ChatListener getChatListener() {
+        return chatListener;
     }
 }
