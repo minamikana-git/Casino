@@ -51,10 +51,11 @@ public class BuyChip implements CommandExecutor {
 
         double totalCost = chipAmount * PRICE_PER_CHIP;
 
-        if (vault.withdrawPlayer(player, totalCost).transactionSuccess()) {
+        if (!vault.withdrawPlayer(player, totalCost).transactionSuccess()) {
             player.sendMessage("チップを購入するために必要な " + totalCost + " 通貨を持っていません。");
             return false;
         }
+
 
         ItemStack chipItem = createChipStack(chipAmount);
         player.getInventory().addItem(chipItem);
