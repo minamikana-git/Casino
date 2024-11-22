@@ -33,7 +33,12 @@ public class SlotMachine {
 
         player.sendMessage("スロットマシンに挑戦します！賭け金を入力してください (最低: " + MIN_BET + "、最大: " + MAX_BET + ")");
 
-        plugin.getChatListener().wait(player, input -> {
+        plugin.getChatListener().waitForInput(player, input -> {
+            if (input == null || input.trim().isEmpty()) {
+                player.sendMessage("無効な入力です。賭け金は数字で入力してください。");
+                return;
+            }
+
             try {
                 int betAmount = Integer.parseInt(input);
 
@@ -43,6 +48,7 @@ public class SlotMachine {
                 }
 
                 synchronized (plugin) {
+                    // player自身を渡して確認する
                     if (!plugin.getEconomy().has(player, betAmount)) {
                         player.sendMessage("残高が不足しています。必要額: " + betAmount);
                         return;
@@ -59,6 +65,8 @@ public class SlotMachine {
             }
         });
     }
+
+
     public static void openSlotGUI(Player player, int betAmount) {
         Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
 
@@ -171,7 +179,7 @@ public class SlotMachine {
     }
 
     public static void openSlotGUI(Player player) {
-        int betAmount = MIN_BET; // 仮に最低賭け金を設定
+        int betAmount = plugin.getMinimumBet(); // 仮に最低賭け金を設定
         openSlotGUI(player, betAmount);
     }
 }

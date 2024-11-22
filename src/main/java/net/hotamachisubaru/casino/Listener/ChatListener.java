@@ -1,45 +1,51 @@
 package net.hotamachisubaru.casino.Listener;
 
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.plugin.Plugin;
-
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.concurrent.ConcurrentHashMap;
+
+import net.hotamachisubaru.casino.Casino;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.jetbrains.annotations.NotNull;
 
 public class ChatListener implements Listener {
 
-    private final Plugin plugin;
-    private final HashMap<UUID, Consumer<String>> chatListeners = new HashMap<>();
+    private final ConcurrentHashMap<UUID, Consumer<String>> listeners = new ConcurrentHashMap<>();
 
-    public ChatListener(Plugin plugin) {
-        this.plugin = plugin;
+    public ChatListener(Casino casino) {
+        Bukkit.getServer().getPluginManager().registerEvents(this, casino);
     }
 
-    // プレイヤーのUUIDをキーにしてメッセージ処理を登録
-    public void waitForInput(Player player, Consumer<String> onMessageReceived) {
-        chatListeners.put(player.getUniqueId(), onMessageReceived);
+    public void waitForInput(Player player, Consumer<String> consumer) {
+        if (listeners.containsKey(player.getUniqueId())) {
+            player.sendMessage("既に入力待ちの操作があります。完了してからもう一度試してください。");
+            return;
+        }
+
+        listeners.put(player.getUniqueId(), consumer);
         player.sendMessage("チャットに入力してください。");
+
+        // タイムアウト処理
+        Bukkit.getScheduler().runTaskLater(Casino.getInstance(), () -> {
+            if (listeners.containsKey(player.getUniqueId())) {
+                listeners.remove(player.getUniqueId());
+                player.sendMessage("入力の時間切れです。もう一度試してください。");
+            }
+        }, 20L * 60); // 60秒後
     }
 
-    @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        UUID playerId = event.getPlayer().getUniqueId();
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
 
-        // リスナーが登録されているプレイヤーのみ処理する
-        if (chatListeners.containsKey(playerId)) {
-            // イベントをキャンセルして他のリスナーに影響しないようにする
-            event.setCancelled(true);
-
-            // 入力メッセージを取得して登録された処理を実行
-            Consumer<String> action = chatListeners.get(playerId);
-            action.accept(event.getMessage());
-
-            // 処理が完了したらリスナーを解除
-            chatListeners.remove(playerId);
+        if (listeners.containsKey(uuid)) {
+            Consumer<String> consumer = listeners.get(uuid);
+            listeners.remove(uuid); // 処理後に削除
+            consumer.accept(event.getMessage());
+            event.setCancelled(true); // チャットメッセージをキャンセル
         }
     }
 }
