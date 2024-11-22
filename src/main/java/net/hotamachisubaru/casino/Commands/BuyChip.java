@@ -1,22 +1,28 @@
 package net.hotamachisubaru.casino.Commands;
 
 import net.hotamachisubaru.casino.Casino;
+import net.hotamachisubaru.casino.Manager.ChipManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Material;
-import org.bukkit.block.Vault;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import static net.hotamachisubaru.casino.Casino.economy;
+import java.io.File;
+import java.io.IOException;
 
 public class BuyChip implements CommandExecutor {
     private static final double PRICE_PER_CHIP = 10.0; // 例: 1チップ = 10通貨
     private final Casino plugin;
     private final Economy vault;
+    private File file;
+    private FileConfiguration config;
+    ChipManager chipManager = new ChipManager();
 
     public BuyChip(Casino plugin) {
         this.plugin = plugin;
@@ -57,10 +63,44 @@ public class BuyChip implements CommandExecutor {
         }
 
 
+
+
         ItemStack chipItem = createChipStack(chipAmount);
         player.getInventory().addItem(chipItem);
         player.sendMessage("チップを " + chipAmount + " 枚購入しました (合計金額: " + totalCost + ")。");
         return true;
+    }
+
+    public void ChipManager() {
+        file = new File("plugins/Casino/chips.yml");
+        config = YamlConfiguration.loadConfiguration(file);
+    }
+
+    // チップを取得
+    public int getChips(Player player) {
+        return config.getInt(player.getUniqueId().toString(), 0);
+    }
+
+    // チップを追加
+    public void addChips(Player player, int amount) {
+        int currentChips = getChips(player);
+        config.set(player.getUniqueId().toString(), currentChips + amount);
+        saveConfig();
+    }
+
+    // チップを設定（直接変更）
+    public void setChips(Player player, int amount) {
+        config.set(player.getUniqueId().toString(), amount);
+        saveConfig();
+    }
+
+    // チップを保存
+    private void saveConfig() {
+        try {
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

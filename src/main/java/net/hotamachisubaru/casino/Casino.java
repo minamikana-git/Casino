@@ -105,6 +105,8 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         return betManager;
     }
 
+
+
     private void registerEvents() {
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
         getServer().getPluginManager().registerEvents(new CasinoListener(), this);

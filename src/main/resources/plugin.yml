@@ -30,6 +30,9 @@ commands:
     description: ジャックポットの上昇率を設定する。
     usage: /jackpotrate <rate>
     permission: op
+  checkchip:
+    description: 現在のチップ数を確認する。
+    usage: /checkchip
 
 permission:
   casino.jackpot:
