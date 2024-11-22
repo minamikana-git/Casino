@@ -4,7 +4,6 @@ package net.hotamachisubaru.casino.Slot;
 import java.util.concurrent.ThreadLocalRandom;
 
 import net.hotamachisubaru.casino.Casino;
-import net.hotamachisubaru.casino.Listener.BlackjackChatListener;
 import net.hotamachisubaru.casino.Listener.ChatListener;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
