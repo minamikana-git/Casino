@@ -13,6 +13,11 @@ import java.util.*;
 public class SlotMachine {
 
     private static final Casino plugin = Casino.getPlugin(Casino.class);
+    private static final int[][] paylines = {
+            {0, 1, 2}, {3, 4, 5}, {6, 7, 8},  // Horizontal
+            {0, 3, 6}, {1, 4, 7}, {2, 5, 8},  // Vertical
+            {0, 4, 8}, {2, 4, 6}              // Diagonal
+    };
 
     // 賭け金の設定
     private static final int MIN_BET = 1000; // 最低賭け金
@@ -132,7 +137,15 @@ public class SlotMachine {
             player.sendMessage("おめでとう！当たりラインがありました！");
 
             // 報酬額計算
-            result.getRewards().forEach((type, count)
+            result.getRewards().forEach((type, count) -> {
+                int reward = betAmount * count; // 仮に報酬額を賭け金に掛けて計算
+                plugin.addChips(player, reward);
+                player.sendMessage(type + "に" + reward + "チップを獲得しました！");
+            });
+
+            // ダブルアップ処理
+            SlotDoubleUp.attemptDoubleUp(player, betAmount);
+
         } else {
             player.sendMessage("残念、今回はハズレです。");
         }
