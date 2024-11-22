@@ -10,27 +10,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.*;
 
 public class Roulette {
-    private void addToJackpotFromBet(int betAmount) {
-        Casino plugin = Casino.getPlugin(Casino.class);
-        double increaseRate = plugin.getConfig().getDouble("jackpot_increase_rate", 0.05);
-        int amountToAdd = (int) (betAmount * increaseRate);
-        plugin.addToJackpot(amountToAdd);
-    }
 
-    private void checkJackpot(Player player) {
-        Casino plugin = Casino.getPlugin(Casino.class);
-        double winChance = plugin.getConfig().getDouble("jackpot_win_chance", 0.01);
 
-        // ランダムに抽選
-        if (Math.random() < winChance) {
-            int jackpotAmount = plugin.getJackpotAmount();
-            player.sendMessage("おめでとうございます！ジャックポットを当てました！獲得額: " + jackpotAmount + " チップ！");
-            plugin.addChips(player, jackpotAmount);
-            plugin.resetJackpot();
-        } else {
-            player.sendMessage("ジャックポットには当選しませんでしたが、また挑戦してください！");
-        }
-    }
 
     public void executeRoulette(Player player, String bet, int betAmount) {
         Casino plugin = Casino.getPlugin(Casino.class);
@@ -40,8 +21,7 @@ public class Roulette {
             return;
         }
 
-        // 賭け金の一部をジャックポットに加算
-        addToJackpotFromBet(betAmount);
+
 
         // ルーレットの結果をランダムに決定
         List<String> outcomes = new ArrayList<>(Arrays.asList("赤", "黒", "緑"));
@@ -53,8 +33,7 @@ public class Roulette {
             player.sendMessage("おめでとう！勝ちました！");
             plugin.addChips(player, betAmount * 2); // 勝利時は2倍のチップを与える
 
-            // ジャックポットの抽選
-            checkJackpot(player);
+
         } else {
             player.sendMessage("残念、負けました。次の挑戦をお待ちしています！");
             plugin.removeChips(player, betAmount);
