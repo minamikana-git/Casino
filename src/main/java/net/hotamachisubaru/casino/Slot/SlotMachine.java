@@ -169,7 +169,7 @@ public class SlotMachine {
     }
 
     private static void checkJackpot(Player player) {
-        double winChance = plugin.getConfig().getDouble("jackpot_win_chance", 0.01);
+        double winChance = plugin.getConfig().getDouble("jackpot_win_chance", 0.05);
         if (Math.random() < winChance) {
             int jackpotAmount = plugin.getJackpotAmount();
             player.sendMessage("ジャックポット獲得！ " + jackpotAmount + " チップを獲得！");
