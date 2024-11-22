@@ -3,11 +3,17 @@ package net.hotamachisubaru.casino.Roulette;
 import net.hotamachisubaru.casino.Casino;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
+
+import static net.hotamachisubaru.casino.Manager.PlayerDataManager.plugin;
 
 public class Roulette {
 
@@ -64,4 +70,29 @@ public class Roulette {
         }
         return item;
     }
+
+    // チップ数を player.yml に保存
+    public void setChips(Player player, int amount) {
+        File playerFile = new File(plugin.getDataFolder(), "players/" + player.getUniqueId() + ".yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+
+        config.set("chips", amount);
+        try {
+            config.save(playerFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("チップ数の保存に失敗しました: " + e.getMessage());
+        }
+    }
+
+    // チップ数を player.yml から読み込む
+    public int getChips(Player player) {
+        File playerFile = new File(plugin.getDataFolder(), "players/" + player.getUniqueId() + ".yml");
+        if (!playerFile.exists()) {
+            return 0; // ファイルがなければ 0 チップ
+        }
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        return config.getInt("chips", 0);
+    }
+
+
 }

@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public class PlayerDataManager {
 
-    private static final JavaPlugin plugin = JavaPlugin.getPlugin(Casino.class); // プラグインインスタンス
+    public static final JavaPlugin plugin = JavaPlugin.getPlugin(Casino.class); // プラグインインスタンス
 
     // player.yml ファイルのパス
     private static File playerFile = new File(plugin.getDataFolder(), "player.yml");

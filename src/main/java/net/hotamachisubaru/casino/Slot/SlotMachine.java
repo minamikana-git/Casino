@@ -31,6 +31,8 @@ public class SlotMachine {
         int MIN_BET = plugin.getMinimumBet(); // 最小賭け金
         int MAX_BET = plugin.getMaximumBet(); // 最大賭け金
 
+        int playerChips = plugin.getChips(player);
+        player.sendMessage("現在のチップ数: " + playerChips);
         player.sendMessage("スロットマシンに挑戦します！賭け金を入力してください (最低: " + MIN_BET + "、最大: " + MAX_BET + ")");
 
         plugin.getChatListener().waitForInput(player, input -> {
@@ -44,6 +46,12 @@ public class SlotMachine {
 
                 if (betAmount < MIN_BET || betAmount > MAX_BET) {
                     player.sendMessage("賭け金は " + MIN_BET + " から " + MAX_BET + " の間で入力してください。");
+                    return;
+                }
+
+                // チップ確認
+                if (betAmount > playerChips) {
+                    player.sendMessage("チップが不足しています。現在のチップ数: " + playerChips);
                     return;
                 }
 
