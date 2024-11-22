@@ -132,11 +132,7 @@ public class SlotMachine {
             player.sendMessage("おめでとう！当たりラインがありました！");
 
             // 報酬額計算
-            result.getRewards().forEach((type, count) -> {
-                int rewardAmount = (betAmount * count) / paylines; // 配当倍率
-                player.getInventory().addItem(new ItemStack(type, rewardAmount));
-                player.sendMessage(type + " のラインで " + rewardAmount + " 獲得！");
-            });
+            result.getRewards().forEach((type, count)
         } else {
             player.sendMessage("残念、今回はハズレです。");
         }

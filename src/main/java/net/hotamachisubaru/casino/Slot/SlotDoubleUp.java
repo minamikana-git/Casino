@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import net.hotamachisubaru.casino.Casino;
 import net.hotamachisubaru.casino.Listener.BlackjackChatListener;
+import net.hotamachisubaru.casino.Listener.ChatListener;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -13,10 +14,14 @@ public class SlotDoubleUp {
 
     public static void attemptDoubleUp(Player player, int winnings) {
         player.sendMessage("ダブルアップに挑戦しますか？(はい/いいえ)");
-        BlackjackChatListener chatListener = (BlackjackChatListener) Casino.getPlugin(Casino.class).getChatListener();
-        chatListener.wait(player, (input) -> {
-            handleDoubleUpResponse(player, winnings, input);
-        });
+        ChatListener chatListener = Casino.getInstance().getChatListener();
+        if (chatListener != null) {
+            chatListener.waitForInput(player, (input) -> {
+                handleDoubleUpResponse(player, winnings, input);
+            });
+        } else {
+            player.sendMessage("チャットリスナーの取得に失敗しました。");
+        }
     }
 
     private static void handleDoubleUpResponse(Player player, int winnings, String input) {
