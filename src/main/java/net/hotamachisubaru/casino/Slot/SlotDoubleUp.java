@@ -25,7 +25,7 @@ public class SlotDoubleUp {
     }
 
     private static void handleDoubleUpResponse(Player player, int winnings, String input) {
-        if (input != null && "はい".equalsIgnoreCase(input)) {
+        if ("はい".equalsIgnoreCase(input)) {
             if (ThreadLocalRandom.current().nextBoolean()) {
                 winnings *= 2;
                 player.sendMessage("ダブルアップ成功！獲得額: " + winnings);
