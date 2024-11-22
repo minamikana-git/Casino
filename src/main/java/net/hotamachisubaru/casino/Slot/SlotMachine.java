@@ -14,19 +14,25 @@ public class SlotMachine {
 
     private static final Casino plugin = Casino.getPlugin(Casino.class);
     private static final int[][] paylines = {
-            {0, 1, 2}, {3, 4, 5}, {6, 7, 8},  // Horizontal
-            {0, 3, 6}, {1, 4, 7}, {2, 5, 8},  // Vertical
-            {0, 4, 8}, {2, 4, 6}              // Diagonal
+            {0, 1, 2}, // Horizontal
+            {3, 4, 5},
+            {6, 7, 8},
+            {0, 3, 6},
+            {1, 4, 7}, // Vertical
+            {0, 4, 8},
+            {2, 5, 8},
+            {2, 4, 6}  // Diagonal
     };
 
     // 賭け金の設定
-    private static final int MIN_BET = 1000; // 最低賭け金
-    private static final int MAX_BET = 50000; // 最大賭け金
+    // 最大賭け金
 
     public static void startBetting(Player player) {
+        int MIN_BET = plugin.getMinimumBet();
+        int MAX_BET = plugin.getMaximumBet();
+
         player.sendMessage("スロットマシンに挑戦します！賭け金を入力してください (最低: " + MIN_BET + "、最大: " + MAX_BET + ")");
 
-        // チャットで賭け金を入力させる例
         plugin.getChatListener().wait(player, input -> {
             try {
                 int betAmount = Integer.parseInt(input);
@@ -36,28 +42,23 @@ public class SlotMachine {
                     return;
                 }
 
-                // 賭け金チェック
-                if (!plugin.getEconomy().has(player, betAmount)) {
-                    player.sendMessage("残高が不足しています。必要額: " + betAmount);
-                    return;
+                synchronized (plugin) {
+                    if (!plugin.getEconomy().has(player, betAmount)) {
+                        player.sendMessage("残高が不足しています。必要額: " + betAmount);
+                        return;
+                    }
+
+                    plugin.getEconomy().withdrawPlayer(player, betAmount);
                 }
 
-                // 賭け金を差し引く
-                plugin.getEconomy().withdrawPlayer(player, betAmount);
                 player.sendMessage("賭け金 " + betAmount + " を設定しました！スロットを回します...");
-
-                // ジャックポットに賭け金の一部を加算
                 addToJackpotFromBet(betAmount);
-
-                // スロットGUIを開く
                 openSlotGUI(player, betAmount);
-
             } catch (NumberFormatException e) {
                 player.sendMessage("賭け金は整数で入力してください。");
             }
         });
     }
-
     public static void openSlotGUI(Player player, int betAmount) {
         Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
 
