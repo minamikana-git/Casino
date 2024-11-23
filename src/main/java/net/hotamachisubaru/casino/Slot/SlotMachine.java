@@ -108,46 +108,33 @@ public class SlotMachine {
         List<Material> slotItems = plugin.getSlotItems();
         slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
 
-
-        // 中央3x3のスロットインデックスを指定
+        // 3x3の中央スロット番号（36スロットインベントリの場合）
         int[] centerSlots = {
-                10, 11, 12,
-                19, 20, 21,
-                28, 29, 30
+                10, 11, 12, // 2行目中央3つ
+                19, 20, 21, // 3行目中央3つ
+                28, 29, 30  // 4行目中央3つ
         };
 
-        // 中央3x3スロットにランダムなアイテムを設定
+        // 指定したスロット番号にランダムなアイテムを配置
         for (int slot : centerSlots) {
             slotGUI.setItem(slot, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));
         }
 
-        // 中央以外のスロットを空に設定
-        // 中央以外のスロットを空に設定
-
-
-        // 中央以外のスロットを空に設定
-        Set<Integer> centerSlotSet = Arrays.stream(centerSlots).boxed().collect(Collectors.toSet());
-
-        // 中央以外のスロットを空に設定
+        // その他のスロットを空にする
         for (int i = 0; i < slotGUI.getSize(); i++) {
-            if (centerSlotSet.contains(i)) {
-                continue;
+            boolean isCenterSlot = false;
+            for (int slot : centerSlots) {
+                if (slot == i) {
+                    isCenterSlot = true;
+                    break;
+                }
             }
-            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
-        }
-        for (int i = 0; i < slotGUI.getSize(); i++) {
-            if (centerSlotSet.contains(i)) {
-                continue;
+            if (!isCenterSlot) {
+                slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
             }
-            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
-        }
-        for (int i = 0; i < slotGUI.getSize(); i++) {
-            if (centerSlotSet.contains(i)) {
-                continue;
-            }
-            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
         }
     }
+
 
 
     private static boolean isSlotItemEmpty() {
