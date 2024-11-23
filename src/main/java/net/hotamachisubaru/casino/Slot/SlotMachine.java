@@ -94,23 +94,28 @@ public class SlotMachine {
     }
 
     public static void openSlotGUI(Player player, int betAmount) {
-        // 3x3 グリッドのインベントリを作成
+        // 3x3 グリッドを作成（周囲は空、中央だけアイテム）
         Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
-        fillSlotItems(slotGUI);
-        player.openInventory(slotGUI);
-        startSlotAnimation(player, slotGUI, betAmount);
+        fillSlotItems(slotGUI);  // 中身のアイテムを設定
+        player.openInventory(slotGUI);  // プレイヤーにGUIを開かせる
+        startSlotAnimation(player, slotGUI, betAmount);  // アニメーション開始
     }
 
 
     private static void fillSlotItems(Inventory slotGUI) {
-        List<Material> slotItems = plugin.getSlotItems();
-        slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
+        List<Material> slotItems = plugin.getSlotItems();  // スロットのアイテムリスト
+        slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;  // アイテムが空ならデフォルトの石を設定
+
+        // 3x3 グリッドの中央にアイテムを配置
         for (int i = 0; i < 9; i++) {
-            // インデックスを0-8に設定し、9スロット分配置する
-            slotGUI.setItem(i, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));
+            slotGUI.setItem(i, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));  // 0〜8番目にアイテムをランダムに設定
+        }
+
+        // 周囲のスロットを空に設定（インデックス9〜26）
+        for (int i = 9; i < 27; i++) {
+            slotGUI.setItem(i, new ItemStack(Material.AIR));  // 空アイテムで埋める
         }
     }
-
     private static boolean isSlotItemEmpty() {
         return plugin.getSlotItems().isEmpty();
     }
@@ -123,26 +128,22 @@ public class SlotMachine {
             @Override
             public void run() {
                 if (row < 3) {
-                    // 3x3 グリッドのアニメーションを行う
-                    stopRow(slotGUI, row);
+                    stopRow(slotGUI, row);  // 3行にわたるアニメーションを実行
                     row++;
                 } else {
-                    handleSlotResult(player, slotGUI, betAmount);
-                    closeGuiAfterDelay(player, slotGUI);
+                    handleSlotResult(player, slotGUI, betAmount);  // スロットの結果を処理
+                    closeGuiAfterDelay(player, slotGUI);  // 数秒後にGUIを閉じる
                     this.cancel();
                 }
             }
         }.runTaskTimer(plugin, 20L, 10L);
     }
-
     private static void stopRow(Inventory slotGUI, int row) {
         for (int column = 0; column < 3; column++) {
             int index = row * 3 + column;
-            slotGUI.setItem(index, getRandomSlotItem());
+            slotGUI.setItem(index, getRandomSlotItem());  // 行ごとにアイテムを設定
         }
     }
-
-
 
     private static void stopColumn(Inventory slotGUI, int column) {
         for (int row = 0; row < 3; row++) {
