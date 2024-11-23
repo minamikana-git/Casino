@@ -130,6 +130,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
             chatListener = new ChatListener();
         }
         getServer().getPluginManager().registerEvents(chatListener, this);
+        getServer().getPluginManager().registerEvents(new SlotMachineListener(), this);
     }
 
     public Casino() {

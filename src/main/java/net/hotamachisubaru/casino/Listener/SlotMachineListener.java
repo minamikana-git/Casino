@@ -3,11 +3,12 @@ package net.hotamachisubaru.casino.Listener;
 import org.bukkit.entity.Player;
 import java.util.logging.Logger;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 
-public class SlotMachineListener {
+public class SlotMachineListener implements Listener {
     private void resetSlotMachine(Inventory inventory) {
         inventory.clear();
         Logger.getLogger("SlotMachineLogger").info("Slot machine inventory has been reset.");
