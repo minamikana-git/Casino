@@ -10,6 +10,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static net.hotamachisubaru.casino.Slot.SlotDoubleUp.askForDoubleUp;
 
@@ -94,28 +95,61 @@ public class SlotMachine {
     }
 
     public static void openSlotGUI(Player player, int betAmount) {
-        // 3x3 グリッドを作成（周囲は空、中央だけアイテム）
-        Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
-        fillSlotItems(slotGUI);  // 中身のアイテムを設定
+        // インベントリサイズは36（4行×9列）に設定
+        Inventory slotGUI = Bukkit.createInventory(null, 36, "スロットマシン");
+        fillSlotItems(slotGUI);  // 中央部分にアイテムを設定
         player.openInventory(slotGUI);  // プレイヤーにGUIを開かせる
         startSlotAnimation(player, slotGUI, betAmount);  // アニメーション開始
     }
 
 
-    private static void fillSlotItems(Inventory slotGUI) {
-        List<Material> slotItems = plugin.getSlotItems();  // スロットのアイテムリスト
-        slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;  // アイテムが空ならデフォルトの石を設定
 
-        // 3x3 グリッドの中央にアイテムを配置
-        for (int i = 0; i < 9; i++) {
-            slotGUI.setItem(i, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));  // 0〜8番目にアイテムをランダムに設定
+    private static void fillSlotItems(Inventory slotGUI) {
+        List<Material> slotItems = plugin.getSlotItems();
+        slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
+
+
+        // 中央3x3のスロットインデックスを指定
+        int[] centerSlots = {
+                10, 11, 12,
+                19, 20, 21,
+                28, 29, 30
+        };
+
+        // 中央3x3スロットにランダムなアイテムを設定
+        for (int slot : centerSlots) {
+            slotGUI.setItem(slot, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));
         }
 
-        // 周囲のスロットを空に設定（インデックス9〜26）
-        for (int i = 9; i < 27; i++) {
-            slotGUI.setItem(i, new ItemStack(Material.AIR));  // 空アイテムで埋める
+        // 中央以外のスロットを空に設定
+        // 中央以外のスロットを空に設定
+
+
+        // 中央以外のスロットを空に設定
+        Set<Integer> centerSlotSet = Arrays.stream(centerSlots).boxed().collect(Collectors.toSet());
+
+        // 中央以外のスロットを空に設定
+        for (int i = 0; i < slotGUI.getSize(); i++) {
+            if (centerSlotSet.contains(i)) {
+                continue;
+            }
+            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
+        }
+        for (int i = 0; i < slotGUI.getSize(); i++) {
+            if (centerSlotSet.contains(i)) {
+                continue;
+            }
+            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
+        }
+        for (int i = 0; i < slotGUI.getSize(); i++) {
+            if (centerSlotSet.contains(i)) {
+                continue;
+            }
+            slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
         }
     }
+
+
     private static boolean isSlotItemEmpty() {
         return plugin.getSlotItems().isEmpty();
     }
