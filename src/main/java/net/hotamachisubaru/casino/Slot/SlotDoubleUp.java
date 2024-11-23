@@ -19,16 +19,20 @@ public class SlotDoubleUp {
 
     public static void askForDoubleUp(Player player, int betAmount, int attempt) {
         if (attempt > 5) {
-            player.sendMessage("ダブルアップの上限に達しました！");
+            player.sendMessage("ダブルアップの挑戦回数が上限に達しました！ゲーム終了です。");
             return;
         }
 
         player.sendMessage("ダブルアップに挑戦しますか？ (はい/いいえ)");
         plugin.getChatListener().waitForInput(player, input -> {
-            if ("はい".equals(input)) {
-                SlotDoubleUp.attemptDoubleUp(player, betAmount * 2);
-            } else {
+            if ("はい".equalsIgnoreCase(input)) { // 大文字小文字を区別しない
+                player.sendMessage("ダブルアップに挑戦します！");
+                SlotDoubleUp.attemptDoubleUp(player, betAmount * 2 * attempt);
+            } else if ("いいえ".equalsIgnoreCase(input)) {
                 player.sendMessage("ゲーム終了、お疲れ様でした！");
+            } else {
+                player.sendMessage("無効な入力です。「はい」または「いいえ」を入力してください。");
+                askForDoubleUp(player, betAmount, attempt); // 再入力を促す
             }
         });
     }
