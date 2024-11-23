@@ -20,13 +20,14 @@ public class BuyChip implements CommandExecutor {
     private static final double PRICE_PER_CHIP = 10.0; // 例: 1チップ = 10通貨
     private final Casino plugin;
     private final Economy vault;
+    private final ChipManager chipManager;
     private File file;
     private FileConfiguration config;
-    ChipManager chipManager = new ChipManager();
 
     public BuyChip(Casino plugin) {
         this.plugin = plugin;
         this.vault = plugin.getEconomy();
+        this.chipManager = plugin.getChipManager();
     }
 
     @Override
@@ -62,16 +63,22 @@ public class BuyChip implements CommandExecutor {
             return false;
         }
 
+        // 現在のチップを取得
+        int currentChips = chipManager.getChips(player);
+        // 新しいチップ数を計算
+        int newTotalChips = currentChips + chipAmount;
+        // 更新を反映
+        chipManager.setChips(player, newTotalChips);
 
-
-
+        player.sendMessage("チップを " + chipAmount + " 枚購入しました (合計金額: " + totalCost + ")。");
+        player.sendMessage("現在のチップ数: " + newTotalChips + " 枚");
         ItemStack chipItem = createChipStack(chipAmount);
         player.getInventory().addItem(chipItem);
         player.sendMessage("チップを " + chipAmount + " 枚購入しました (合計金額: " + totalCost + ")。");
         return true;
     }
 
-    public void ChipManager() {
+    public void loadChipConfig() {
         file = new File("plugins/Casino/chips.yml");
         config = YamlConfiguration.loadConfiguration(file);
     }
@@ -99,7 +106,7 @@ public class BuyChip implements CommandExecutor {
         try {
             config.save(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            plugin.getLogger().severe("チップの保存に失敗しました: " + e.getMessage());
         }
     }
 

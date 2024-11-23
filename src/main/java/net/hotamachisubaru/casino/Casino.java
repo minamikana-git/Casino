@@ -4,6 +4,7 @@ import net.hotamachisubaru.casino.Commands.*;
 import net.hotamachisubaru.casino.GUI.CasinoGUI;
 import net.hotamachisubaru.casino.Listener.*;
 import net.hotamachisubaru.casino.Manager.BetManager;
+import net.hotamachisubaru.casino.Manager.ChipManager;
 import net.hotamachisubaru.casino.Vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
@@ -151,6 +152,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         getCommand("casino").setExecutor(new OpenCasinoCommand());
         getCommand("setjackpot").setExecutor(new JackpotCommand());
         getCommand("jackpotrate").setExecutor(new JackpotRateCommand());
+        getCommand("checkchip").setExecutor(new CheckChip());
     }
 
     public void addChips(Player player, int amount) {
@@ -261,5 +263,9 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         vault.withdraw(player, amount);
         addToJackpot(amount / 10); // Example: add 10% of the bet amount to the jackpot
         player.sendMessage("賭け金 " + amount + " を受け取りました。");
+    }
+
+    public ChipManager getChipManager() {
+        return new ChipManager();
     }
 }
