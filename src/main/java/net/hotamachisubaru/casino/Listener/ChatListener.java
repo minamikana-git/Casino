@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.hotamachisubaru.casino.Casino;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.jetbrains.annotations.NotNull;
@@ -45,14 +47,15 @@ public class ChatListener implements Listener {
         }, TIMEOUT_DELAY);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(@NotNull AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         if (listeners.containsKey(uuid)) {
-            Consumer<String> consumer = listeners.get(uuid);
-            listeners.remove(uuid); // 処理後に削除
+            Consumer<String> consumer = listeners.remove(uuid);
             consumer.accept(event.getMessage());
-            event.setCancelled(true); // チャットメッセージをキャンセル
+            event.setCancelled(true); // チャットをキャンセル
         }
     }
+
 }

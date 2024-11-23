@@ -16,17 +16,30 @@ import static net.hotamachisubaru.casino.Slot.SlotDoubleUp.askForDoubleUp;
 public class SlotMachine {
     public static final Casino plugin = Casino.getPlugin(Casino.class);
     private static final Random RANDOM = new Random();
+    private static final Map<Material, String> ITEM_NAMES = new HashMap<>() {{
+        put(Material.COAL, "石炭");
+        put(Material.IRON_INGOT, "鉄インゴット");
+        put(Material.GOLD_INGOT, "金インゴット");
+        put(Material.DIAMOND, "ダイヤモンド");
+        put(Material.NETHERITE_SCRAP, "ネザライトのかけら");
+    }};
+
+
+    private static String getItemName(Material material) {
+        return ITEM_NAMES.getOrDefault(material, material.name()); // マップにない場合、英語名を使用
+    }
 
     private static final int[][] PAYLINES = {
-            {0, 1, 2}, // Horizontal
-            {3, 4, 5},
-            {6, 7, 8},
-            {0, 3, 6},
-            {1, 4, 7}, // Vertical
-            {2, 5, 8},
-            {0, 4, 8}, // Diagonal
-            {2, 4, 6}
+            {0, 1, 2}, // 横ライン1
+            {3, 4, 5}, // 横ライン2
+            {6, 7, 8}, // 横ライン3
+            {0, 3, 6}, // 縦ライン1
+            {1, 4, 7}, // 縦ライン2
+            {2, 5, 8}, // 縦ライン3
+            {0, 4, 8}, // 斜めライン1
+            {2, 4, 6}  // 斜めライン2
     };
+
     private static final String INVALID_INPUT_MESSAGE = "無効な入力です。賭け金は数字で入力してください。";
     private static final String JACKPOT_MESSAGE = "ジャックポット獲得！ %d チップを獲得！";
 
@@ -81,16 +94,19 @@ public class SlotMachine {
     }
 
     public static void openSlotGUI(Player player, int betAmount) {
-        Inventory slotGUI = Bukkit.createInventory(null, 9, "スロットマシン");
+        // 3x3 グリッドのインベントリを作成
+        Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
         fillSlotItems(slotGUI);
         player.openInventory(slotGUI);
         startSlotAnimation(player, slotGUI, betAmount);
     }
 
+
     private static void fillSlotItems(Inventory slotGUI) {
         List<Material> slotItems = plugin.getSlotItems();
         slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
         for (int i = 0; i < 9; i++) {
+            // インデックスを0-8に設定し、9スロット分配置する
             slotGUI.setItem(i, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));
         }
     }
@@ -101,13 +117,15 @@ public class SlotMachine {
 
     private static void startSlotAnimation(Player player, Inventory slotGUI, int betAmount) {
         new BukkitRunnable() {
+            int row = 0;
             int column = 0;
 
             @Override
             public void run() {
-                if (column < 3) {
-                    stopColumn(slotGUI, column);
-                    column++;
+                if (row < 3) {
+                    // 3x3 グリッドのアニメーションを行う
+                    stopRow(slotGUI, row);
+                    row++;
                 } else {
                     handleSlotResult(player, slotGUI, betAmount);
                     closeGuiAfterDelay(player, slotGUI);
@@ -117,18 +135,33 @@ public class SlotMachine {
         }.runTaskTimer(plugin, 20L, 10L);
     }
 
-    private static void stopColumn(Inventory slotGUI, int column) {
-        for (int row = 0; row < 3; row++) {
+    private static void stopRow(Inventory slotGUI, int row) {
+        for (int column = 0; column < 3; column++) {
             int index = row * 3 + column;
             slotGUI.setItem(index, getRandomSlotItem());
         }
     }
 
-    private static ItemStack getRandomSlotItem() {
-        List<Material> slotItems = plugin.getSlotItems();
-        slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
-        return new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size())));
+
+
+    private static void stopColumn(Inventory slotGUI, int column) {
+        for (int row = 0; row < 3; row++) {
+            int index = row * 3 + column; // 3×3 配列におけるインデックス計算
+            slotGUI.setItem(index, getRandomSlotItem()); // 各スロットにランダムアイテムを設定
+        }
     }
+
+
+    private static ItemStack getRandomSlotItem() {
+        // スロットアイテムリストを取得
+        List<Material> slotItems = plugin.getSlotItems();
+        if (slotItems.isEmpty()) { // カスタム設定が空の場合、デフォルトアイテムを使用
+            slotItems = plugin.getDefaultSlotItems();
+        }
+        Material randomItem = slotItems.get(RANDOM.nextInt(slotItems.size()));
+        return new ItemStack(randomItem);
+    }
+
 
     private static void handleSlotResult(Player player, Inventory slotGUI, int betAmount) {
         SlotResult result = calculateSlotResult(slotGUI);
@@ -161,8 +194,9 @@ public class SlotMachine {
     private static boolean isWinningLine(Inventory slotGUI, int[] line, Material first) {
         return Arrays.stream(line)
                 .mapToObj(slotGUI::getItem)
-                .allMatch(item -> item != null && item.getType() == first);
+                .allMatch(item -> item != null && item.getType() == first); // 全アイテムが一致しているか確認
     }
+
 
     private static void giveRewards(Player player, SlotResult result, int betAmount) {
         if (result.isWinning()) {
@@ -176,7 +210,7 @@ public class SlotMachine {
                 try {
                     long reward = Math.multiplyExact(betAmount, (long) count);
                     plugin.addChips(player, (int) reward);
-                    player.sendMessage(material.name() + "に" + reward + "チップを獲得しました！");
+                    player.sendMessage(getItemName(material) + "で " + reward + " チップを獲得しました！");
                 } catch (ArithmeticException e) {
                     player.sendMessage("リワードの計算中にエラーが発生しました。");
                 }

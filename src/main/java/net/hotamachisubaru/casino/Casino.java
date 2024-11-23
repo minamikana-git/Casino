@@ -17,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Casino extends JavaPlugin implements CommandExecutor {
@@ -29,8 +30,10 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     private BetManager betManager;
     private final List<Material> slotItems = new ArrayList<>();
 
+
     @Override
     public void onEnable() {
+
         saveDefaultConfig();
         reloadConfig();
         vault = new Vault();
@@ -38,6 +41,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         setupCasino();
         setupEconomy();
         setupCommands();
+        chatListener = new ChatListener(); // 初期化
         registerEvents();
         betManager = new BetManager();
     }
@@ -82,8 +86,14 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         saveConfig();
     }
 
-    public List<Material> getSlotItems() {
-        return slotItems;
+    public static List<Material> getDefaultSlotItems() {
+        return Arrays.asList(
+                Material.COAL,            // 石炭
+                Material.IRON_INGOT,      // 鉄インゴット
+                Material.GOLD_INGOT,      // 金インゴット
+                Material.DIAMOND,         // ダイヤモンド
+                Material.NETHERITE_SCRAP  // ネザライトのかけら
+        );
     }
 
     public int getMinBet() {
@@ -108,6 +118,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
 
 
+
     private void registerEvents() {
         getServer().getPluginManager().registerEvents(new RouletteClickListener(), this);
         getServer().getPluginManager().registerEvents(new CasinoListener(), this);
@@ -115,6 +126,9 @@ public class Casino extends JavaPlugin implements CommandExecutor {
         CasinoGUI casinoGUI = new CasinoGUI(this); // CasinoGUI のインスタンスを生成し、プラグインのインスタンスを渡す
         getServer().getPluginManager().registerEvents(casinoGUI, this);
         getServer().getPluginManager().registerEvents(new RouletteGUIListener(), this);
+        if (chatListener == null) {
+            chatListener = new ChatListener();
+        }
         getServer().getPluginManager().registerEvents(chatListener, this);
     }
 
@@ -268,4 +282,20 @@ public class Casino extends JavaPlugin implements CommandExecutor {
     public ChipManager getChipManager() {
         return new ChipManager();
     }
+
+    public List<Material> getSlotItems() {
+        if (slotItems.isEmpty()) {
+            // デフォルトのスロットアイテムを返す
+            return Arrays.asList(
+                    Material.COAL,            // 石炭
+                    Material.IRON_INGOT,      // 鉄インゴット
+                    Material.GOLD_INGOT,      // 金インゴット
+                    Material.DIAMOND,         // ダイヤモンド
+                    Material.NETHERITE_SCRAP  // ネザライトのかけら
+            );
+        }
+        // カスタム設定済みのスロットアイテムを返す
+        return new ArrayList<>(slotItems);
+    }
+
 }
