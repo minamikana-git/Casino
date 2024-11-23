@@ -204,9 +204,10 @@ public class SlotMachine {
 
     private static boolean isWinningLine(Inventory slotGUI, int[] line, Material first) {
         return Arrays.stream(line)
-                .mapToObj(slotGUI::getItem)
-                .allMatch(item -> item != null && item.getType() == first); // 全アイテムが一致しているか確認
+                .mapToObj(slot -> slotGUI.getItem(slot))
+                .allMatch(item -> item != null && item.getType() == first); // nullチェックを追加
     }
+
 
 
     private static void giveRewards(Player player, SlotResult result, int betAmount) {
