@@ -95,45 +95,27 @@ public class SlotMachine {
     }
 
     public static void openSlotGUI(Player player, int betAmount) {
-        // インベントリサイズは36（4行×9列）に設定
-        Inventory slotGUI = Bukkit.createInventory(null, 36, "スロットマシン");
-        fillSlotItems(slotGUI);  // 中央部分にアイテムを設定
-        player.openInventory(slotGUI);  // プレイヤーにGUIを開かせる
-        startSlotAnimation(player, slotGUI, betAmount);  // アニメーション開始
+        Inventory slotGUI = Bukkit.createInventory(null, 27, "スロットマシン");
+        fillSlotItems(slotGUI); // スロットにアイテムを配置
+        player.openInventory(slotGUI);
+        startSlotAnimation(player, slotGUI, betAmount);
     }
 
 
+
+    private static final int[] SLOT_INDEXES = {3, 4, 5, 12, 13, 14, 21, 22, 23};
 
     private static void fillSlotItems(Inventory slotGUI) {
         List<Material> slotItems = plugin.getSlotItems();
         slotItems = isSlotItemEmpty() ? Collections.singletonList(Material.STONE) : slotItems;
 
-        // 3x3の中央スロット番号（36スロットインベントリの場合）
-        int[] centerSlots = {
-                10, 11, 12, // 2行目中央3つ
-                19, 20, 21, // 3行目中央3つ
-                28, 29, 30  // 4行目中央3つ
-        };
-
-        // 指定したスロット番号にランダムなアイテムを配置
-        for (int slot : centerSlots) {
-            slotGUI.setItem(slot, new ItemStack(slotItems.get(RANDOM.nextInt(slotItems.size()))));
-        }
-
-        // その他のスロットを空にする
-        for (int i = 0; i < slotGUI.getSize(); i++) {
-            boolean isCenterSlot = false;
-            for (int slot : centerSlots) {
-                if (slot == i) {
-                    isCenterSlot = true;
-                    break;
-                }
-            }
-            if (!isCenterSlot) {
-                slotGUI.setItem(i, new ItemStack(Material.AIR)); // 空スロット
-            }
+        // 特定のスロット番号にランダムなアイテムを配置
+        for (int slot : SLOT_INDEXES) {
+            Material randomItem = slotItems.get(RANDOM.nextInt(slotItems.size()));
+            slotGUI.setItem(slot, new ItemStack(randomItem));
         }
     }
+
 
 
 
