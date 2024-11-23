@@ -130,15 +130,15 @@ public class SlotMachine {
             @Override
             public void run() {
                 if (column < 3) {
-                    stopColumn(slotGUI, column); // 現在の列のアニメーションを停止
+                    stopColumn(slotGUI, column); // 現在の列のスロットを更新
                     column++;
                 } else {
                     handleSlotResult(player, slotGUI, betAmount); // 結果判定
                     closeGuiAfterDelay(player, slotGUI);          // GUIを閉じる
-                    this.cancel();                                // タスクを停止
+                    this.cancel();                                // タスクを終了
                 }
             }
-        }.runTaskTimer(plugin, 20L, 10L);
+        }.runTaskTimer(plugin, 20L, 10L); // アニメーション間隔：20L初期遅延, 10Lループ間隔
     }
 
     private static void stopRow(Inventory slotGUI, int row) {
