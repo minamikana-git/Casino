@@ -9,7 +9,8 @@ import org.bukkit.inventory.Inventory;
 
 public class SlotMachineListener {
     private void resetSlotMachine(Inventory inventory) {
-        // リセット処理の実装
+        inventory.clear();
+        Logger.getLogger("SlotMachineLogger").info("Slot machine inventory has been reset.");
     }
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
