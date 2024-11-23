@@ -125,22 +125,22 @@ public class SlotMachine {
 
     private static void startSlotAnimation(Player player, Inventory slotGUI, int betAmount) {
         new BukkitRunnable() {
-            int row = 0;
             int column = 0;
 
             @Override
             public void run() {
-                if (row < 3) {
-                    stopRow(slotGUI, row);  // 3行にわたるアニメーションを実行
-                    row++;
+                if (column < 3) {
+                    stopColumn(slotGUI, column); // 現在の列のアニメーションを停止
+                    column++;
                 } else {
-                    handleSlotResult(player, slotGUI, betAmount);  // スロットの結果を処理
-                    closeGuiAfterDelay(player, slotGUI);  // 数秒後にGUIを閉じる
-                    this.cancel();
+                    handleSlotResult(player, slotGUI, betAmount); // 結果判定
+                    closeGuiAfterDelay(player, slotGUI);          // GUIを閉じる
+                    this.cancel();                                // タスクを停止
                 }
             }
         }.runTaskTimer(plugin, 20L, 10L);
     }
+
     private static void stopRow(Inventory slotGUI, int row) {
         for (int column = 0; column < 3; column++) {
             int index = row * 3 + column;
@@ -149,9 +149,16 @@ public class SlotMachine {
     }
 
     private static void stopColumn(Inventory slotGUI, int column) {
-        for (int row = 0; row < 3; row++) {
-            int index = row * 3 + column; // 3×3 配列におけるインデックス計算
-            slotGUI.setItem(index, getRandomSlotItem()); // 各スロットにランダムアイテムを設定
+        // 各列のスロット番号を計算
+        int[] columnSlots = {
+                SLOT_INDEXES[column],        // 上段
+                SLOT_INDEXES[column + 3],    // 中段
+                SLOT_INDEXES[column + 6]     // 下段
+        };
+
+        // 列に対応するスロットをランダムなアイテムで上書き
+        for (int slot : columnSlots) {
+            slotGUI.setItem(slot, getRandomSlotItem());
         }
     }
 
