@@ -1,245 +1,97 @@
 package net.hotamachisubaru.casino.Blackjack;
 
-
-import net.hotamachisubaru.casino.Casino;
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import java.util.Scanner;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+public class Game {
+    public static void main(String[] args) {
+        CardDeck cardDeck = new CardDeck();
+        PlayerHand playerHand = new PlayerHand();
+        PlayerHand dealerHand = new PlayerHand();
+        Scanner scanner = new Scanner(System.in);
 
-public class Game implements Listener {
-    private static final String GUI_TITLE_BLACKJACK = "ブラックジャック: アクションを選択";
-    private static final String GUI_TITLE_DOUBLE_UP = "ダブルアップ: 黒か赤を選択";
-    private static final int BLACKJACK_HIT_LIMIT = 21;
-    private static final int DEALER_HIT_LIMIT = 17;
-
-    private final Player player;
-    private final Economy economy;
-    private final Deck deck;
-    private final List<Card> playerHand = new ArrayList<>();
-    private final List<Card> dealerHand = new ArrayList<>();
-    private double bet;
-    private int playerScore = 0;
-    private int dealerScore = 0;
-    private GameState gameState = GameState.WAITING_FOR_START;
-
-    public Game(Player player, Economy economy, double bet) {
-        this.player = player;
-        this.economy = economy;
-        this.bet = bet;
-        this.deck = new Deck();
-        deck.shuffle();
-        Bukkit.getPluginManager().registerEvents(this, Casino.getInstance());
-        Bukkit.getLogger().info("Game initialized: Player=" + player.getName() + ", Bet=" + bet);
-    }
-
-    private void logDebug(String message) {
-       Bukkit.getLogger().info("[Casino Debug] " + message);
-    }
-
-    public void startGame(double betAmount) {
-        if (!validateBet(betAmount)) return;
-        prepareNewGame(betAmount);
-
-        if (!dealInitialCards()) {
-            player.sendMessage("デッキに十分なカードがありません。ゲームを中止します。");
-            Bukkit.getLogger().info("[Casino Debug] デッキに十分なカードがありません。");
-            return;
+        // 初期配布
+        for (int i = 0; i < 2; i++) {
+            playerHand.addCard(cardDeck.drawCard());
+            dealerHand.addCard(cardDeck.drawCard());
         }
 
-        updateScores();
-        displayHands();
-        player.sendMessage("ブラックジャックを開始します！ヒットまたはスタンドを選んでください。");
-        openBlackjackGUI();
+        // プレイヤーターン
+        Bukkit.getLogger().info("プレイヤーの番です:");
+        boolean playerBust = playerTurn(playerHand, cardDeck, scanner);
+
+        if (!playerBust) {
+            // ディーラーターン
+            Bukkit.getLogger().info("\nディーラーの番です:");
+            dealerTurn(dealerHand, cardDeck);
+        }
+
+        // 勝敗判定
+        determineWinner(playerHand, dealerHand);
+
+        scanner.close();
     }
 
-    private boolean validateBet(double betAmount) {
-        if (betAmount <= 0) {
-            sendError("賭け金は正の値を入力してください。");
-            return false;
+    // プレイヤーターン処理
+    private static boolean playerTurn(PlayerHand playerHand, CardDeck cardDeck, Scanner scanner) {
+        while (true) {
+            Bukkit.getLogger().info("あなたのハンド: " + playerHand.getHand());
+            int score = HandEvaluator.calculateScore(playerHand.getHand());
+            Bukkit.getLogger().info("現在のスコア: " + score);
+
+            if (score > 21) {
+                Bukkit.getLogger().info("あなたはバーストしました!");
+                return true;
+            }
+
+            Bukkit.getLogger().info("あなたはヒットしますか？スタンドしますか? (h/s) ");
+            String choice = scanner.nextLine();
+
+            if (choice.equalsIgnoreCase("h")) {
+                playerHand.addCard(cardDeck.drawCard());
+            } else if (choice.equalsIgnoreCase("s")) {
+                break;
+            } else {
+                Bukkit.getLogger().info("無効な入力です。 'h' もしくは 's'で入力してください。");
+            }
         }
-        if (betAmount > economy.getBalance(player)) {
-            sendError("所持金より多い金額は賭けられません。");
-            return false;
-        }
-        if (gameState == GameState.IN_PROGRESS) {
-            sendError("ゲームは既に進行中です。");
-            return false;
-        }
-        return true;
+        return false;
     }
 
-    private void prepareNewGame(double betAmount) {
-        this.bet = betAmount;
-        if (!withdrawBet(betAmount)) return;
+    // ディーラーターン処理
+    private static void dealerTurn(PlayerHand dealerHand, CardDeck cardDeck) {
+        while (true) {
+            int score = HandEvaluator.calculateScore(dealerHand.getHand());
+            Bukkit.getLogger().info("ディーラーのハンド: " + dealerHand.getHand());
+            Bukkit.getLogger().info("ディーラーのスコア: " + score);
 
-        playerHand.clear();
-        dealerHand.clear();
-        gameState = GameState.IN_PROGRESS;
-        Bukkit.getLogger().info("[Casino Debug] Game state set to IN_PROGRESS");
-    }
+            if (score >= 17) {
+                Bukkit.getLogger().info("ディーラーはスタンドしました。");
+                break;
+            }
 
-    private boolean withdrawBet(double amount) {
-        EconomyResponse response = economy.withdrawPlayer(player, amount);
-        if (!response.transactionSuccess()) {
-            sendError("賭け金の引き落としに失敗しました: " + response.errorMessage);
-            return false;
-        }
-        Bukkit.getLogger().info("[Casino Debug] Bet withdrawn: " + amount + ", Remaining Balance: " + economy.getBalance(player));
-        return true;
-    }
-
-    private boolean dealInitialCards() {
-        try {
-            playerHand.add(deck.drawCard());
-            dealerHand.add(deck.drawCard());
-            playerHand.add(deck.drawCard());
-            dealerHand.add(deck.drawCard());
-            return true;
-        } catch (Exception e) {
-            sendError("カードの引き分けに失敗しました: " + e.getMessage());
-            return false;
+            Bukkit.getLogger().info("ディーラーがヒットしました。");
+            dealerHand.addCard(cardDeck.drawCard());
         }
     }
 
-    private void updateScores() {
-        playerScore = calculateHandValue(playerHand);
-        dealerScore = calculateHandValue(dealerHand);
+    // 勝敗判定
+    private static void determineWinner(PlayerHand playerHand, PlayerHand dealerHand) {
+        int playerScore = HandEvaluator.calculateScore(playerHand.getHand());
+        int dealerScore = HandEvaluator.calculateScore(dealerHand.getHand());
 
-        if (playerScore > BLACKJACK_HIT_LIMIT) {
-            endGame(false);  // バースト
-        }
-    }
-
-    private int calculateHandValue(List<Card> hand) {
-        int total = hand.stream().mapToInt(Card::getValue).sum();
-        int aceCount = (int) hand.stream().filter(card -> card.getValue() == 1).count();
-
-        while (total > BLACKJACK_HIT_LIMIT && aceCount > 0) {
-            total -= 10;
-            aceCount--;
-        }
-        return total;
-    }
-
-    private void displayHands() {
-        player.sendMessage("あなたの手札: " + handToString(playerHand) + " （合計: " + playerScore + "）");
-        player.sendMessage("ディーラーの手札: " + dealerHand.get(0) + " と隠されたカード");
-        Bukkit.getLogger().info("[Casino Debug] Player hand: " + handToString(playerHand));
-        Bukkit.getLogger().info("[Casino Debug] Dealer hand: " + dealerHand.get(0));
-    }
-
-    private String handToString(List<Card> hand) {
-        return hand.stream()
-                .map(Card::toString)
-                .collect(Collectors.joining(", "));
-    }
-
-    private void openBlackjackGUI() {
-        openGui(GUI_TITLE_BLACKJACK, "ヒット", "スタンド");
-    }
-
-    private void openGui(String title, String... buttonNames) {
-        Inventory gui = Bukkit.createInventory(null, 9, title);
-        // ボタンを明確に配置
-        for (int i = 0; i < buttonNames.length; i++) {
-            gui.setItem(i, createButton(buttonNames[i]));
-        }
-        player.openInventory(gui);
-    }
-
-    private ItemStack createButton(String name) {
-        Material material = switch (name) {
-            case "スタンド" -> Material.RED_WOOL;
-            case "ドロップアウト" -> Material.GRAY_WOOL;
-            default -> Material.GREEN_WOOL;
-        };
-        ItemStack button = new ItemStack(material);
-        ItemMeta meta = button.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            button.setItemMeta(meta);
-        }
-        return button;
-    }
-
-    private void sendError(String message) {
-        player.sendMessage(message);
-        Bukkit.getLogger().info("[Casino Debug] " + message);
-    }
-
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player clickedPlayer) || !clickedPlayer.equals(player)) return;
-        event.setCancelled(true);
-
-        String title = event.getView().getTitle();
-        if (GUI_TITLE_BLACKJACK.equals(title)) {
-            handleBlackjackAction(event.getCurrentItem());
-        }
-    }
-
-    private void handleBlackjackAction(ItemStack clickedItem) {
-        if (clickedItem == null || !clickedItem.hasItemMeta()) return;
-        String itemName = clickedItem.getItemMeta().getDisplayName();
-
-        if ("ヒット".equals(itemName)) {
-            hit();
-        } else if ("スタンド".equals(itemName)) {
-            stand();
-        }
-    }
-
-    public void hit() {
-        playerHand.add(deck.drawCard());
-        updateScores();
-        // プレイヤーの手札を表示するのはカードを引いた後だけ
-        if (playerScore <= BLACKJACK_HIT_LIMIT) {
-            displayHands();
-        }
+        Bukkit.getLogger().info("\n最終結果");
+        Bukkit.getLogger().info("あなたのハンド: " + playerHand.getHand() + " (Score: " + playerScore + ")");
+        Bukkit.getLogger().info("ディーラーのハンド: " + dealerHand.getHand() + " (Score: " + dealerScore + ")");
 
         if (playerScore > 21) {
-            endGame(false);  // バーストしたら即終了
-        }
-    }
-
-    public void stand() {
-        while (dealerScore < DEALER_HIT_LIMIT) {
-            dealerHand.add(deck.drawCard());
-            updateScores();
-        }
-        endGame(playerScore > dealerScore || dealerScore > BLACKJACK_HIT_LIMIT);
-    }
-
-    private void endGame(boolean playerWins) {
-        if (playerWins) {
-            economy.depositPlayer(player, bet * 2);
-            player.sendMessage("おめでとうございます！あなたの勝ちです！");
+            Bukkit.getLogger().info("バーストしました。あなたの負けです。");
+        } else if (dealerScore > 21 || playerScore > dealerScore) {
+            Bukkit.getLogger().info("あなたの勝ちです!");
+        } else if (playerScore < dealerScore) {
+            Bukkit.getLogger().info("負けてしまいました。");
         } else {
-            player.sendMessage(playerScore > BLACKJACK_HIT_LIMIT ? "あなたはバーストしました。" : "残念、あなたは負けました！");
+            Bukkit.getLogger().info("引き分け!");
         }
-        gameState = GameState.FINISHED;
-
-        // インベントリを確実に閉じる
-        Bukkit.getScheduler().runTask(Casino.getInstance(), () -> {
-            if (player != null && player.isOnline()) {
-                player.closeInventory();
-            }
-        });
-    }
-
-    private enum GameState {
-        WAITING_FOR_START, IN_PROGRESS, FINISHED
     }
 }
