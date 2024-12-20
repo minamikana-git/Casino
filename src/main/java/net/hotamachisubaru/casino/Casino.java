@@ -1,5 +1,6 @@
 package net.hotamachisubaru.casino;
 
+import net.hotamachisubaru.casino.listener.GUIListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Material;
 import org.bukkit.command.CommandExecutor;
@@ -13,7 +14,7 @@ public class Casino extends JavaPlugin implements CommandExecutor {
 
     @Override
     public void onEnable() {
-
+        getServer().getPluginManager().registerEvents(new GUIListener(), this);
     }
 
     private void setupCommands() {
